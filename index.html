@@ -90,7 +90,13 @@ td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-num
 .tanks{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
 .tank{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .tank .id{font-family:var(--mono);font-weight:600;font-size:15px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 12px;font-size:12.5px}
+.cyt{width:100%;border-collapse:collapse;font-size:12.5px}
+.cyt th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;padding:4px 6px;border-bottom:1px solid var(--line)}
+.cyt td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.cyt tr:last-child td{border-bottom:0}
+.cyt td:first-child{font-family:var(--mono);font-weight:600;width:34px}
+.cyt .chip{white-space:normal}
 .kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .empty{padding:28px;text-align:center;color:var(--muted)}
 /* modal */
@@ -573,7 +579,9 @@ function schedule(tank){
   const recs = S.records.filter(r=>r.tankId===tank.tankId);
   return {...el.fe, el, due: el.fe.due||el.cr.due||el.ni.due||el.mg.due, count:recs.length, fe:recs.filter(r=>C(r).fe==="Fe >=50 - investigate").length, recent:recs.filter(r=>C(r).retain==="Recent - retain").length};
 }
-const cyclesCell = tank => { const cs=cyclesOf(tank), rw=rawCycles(tank); return ELS.map(el=>`<div><b class="mono">${EL[el]}</b> ${esc(cycleLabel(cs[el]))}${rw[el].mode==="default"?` <span class="muted" style="font-size:11.5px">· ${t("defTag")}</span>`:""}</div>`).join(""); };
+function cycleShort(cy){ cy=cy||{mode:"shipment"}; const ko=S.lang==="ko"; if(cy.mode==="weekly") return ko?"주 1회":"Weekly"; if(cy.mode==="monthly") return ko?"월 1회":"Monthly"; if(cy.mode==="every_n") return ko?`${cy.n}회 출하마다`:`Every ${cy.n} shipments`; if(cy.mode==="days") return ko?`${cy.n}일마다`:`Every ${cy.n} days`; return ko?"매 출하":"Every shipment"; }
+const cycleTable = (tank,s) => { const cs=cyclesOf(tank), rw=rawCycles(tank); return `<table class="cyt"><thead><tr><th></th><th>${t("cycle")}</th><th>${t("nextDue")}</th></tr></thead><tbody>${ELS.map(el=>`<tr><td>${EL[el]}</td><td>${esc(cycleShort(cs[el]))}${rw[el].mode==="default"?` <span class="muted" style="font-size:11px">· ${t("defTag")}</span>`:""}</td><td><span class="chip ${s.el[el].tone}">${esc(s.el[el].text)}</span></td></tr>`).join("")}</tbody></table>`; };
+const cyclesCell = tank => { const cs=cyclesOf(tank), rw=rawCycles(tank); return ELS.map(el=>`<div><b class="mono">${EL[el]}</b> ${esc(cycleShort(cs[el]))}${rw[el].mode==="default"?` <span class="muted" style="font-size:11.5px">· ${t("defTag")}</span>`:""}</div>`).join(""); };
 const dueCell = s => ELS.map(el=>`<div style="margin:2px 0"><b class="mono">${EL[el]}</b> <span class="chip ${s.el[el].tone}">${esc(s.el[el].text)}</span></div>`).join("");
 function cycleLabel(cy){ cy=cy||{mode:"shipment"}; if(cy.mode==="weekly") return t("cycWeek"); if(cy.mode==="monthly") return t("cycMonth"); if(cy.mode==="every_n") return `${t("cycN").replace("N",cy.n)}`; if(cy.mode==="days") return t("cycDays").replace("N",cy.n); return t("cycShip"); }
 
@@ -764,15 +772,16 @@ function vTanks(){
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="id">${esc(x.tankId)}</span><span class="chip ${x.active===false?"":"ok"}">${esc(x.product||"–")}</span></div>
     <dl class="kv">
       <dt>SP 11827</dt><dd>${isSp(x)?opL("Yes"):opL("No")}</dd>
-      <dt>${t("cycle")}</dt><dd>${cyclesCell(x)}</dd>
-      <dt>${t("nextDue")}</dt><dd>${dueCell(s)}</dd>
       <dt>${t("lastMeas")} (Fe)</dt><dd class="mono">${s.last?fdt(s.last):"–"}</dd>
       <dt>${t("lining")}</dt><dd>${esc(x.lining||"–")}</dd>
       <dt>${t("dedicated")}</dt><dd>${esc(opL(x.dedicated||"Not confirmed"))}</dd>
       <dt>${t("identified")}</dt><dd>${esc(opL(x.identified||"Not confirmed"))}</dd>
       <dt>${t("party")}</dt><dd>${esc(opL(x.party||"Not confirmed"))}</dd>
-      <dt>${t("shipCnt")} / ${t("feCnt")} / ${t("recent")}</dt><dd class="mono">${s.count} / ${s.fe} / ${s.recent}</dd>
+      <dt>${t("shipCnt")}</dt><dd class="mono">${s.count}</dd>
+      <dt>${t("feCnt")}</dt><dd class="mono">${s.fe}</dd>
+      <dt>${t("recent")}</dt><dd class="mono">${s.recent}</dd>
     </dl>
+    ${cycleTable(x,s)}
     ${spWarn(x)?`<div class="banner warn" style="font-size:12px">${esc(t("cycWarn"))}</div>`:""}
     <div class="toolbar"><button class="btn sm" data-act="editTank" data-id="${x.id}">${t("tankCfg")}</button><button class="btn sm" data-act="tankReport" data-id="${x.id}">${t("tankReport")}</button><button class="btn sm" data-act="histTank" data-v="${esc(x.tankId)}">${t("tankHist")}</button></div>
   </article>`}).join("")}</div>`:`<div class="panel empty">${t("emptyTanks")}</div>`}`;
