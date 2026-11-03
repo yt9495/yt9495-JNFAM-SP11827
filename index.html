@@ -233,7 +233,8 @@ const I = {
   tankCfg:"탱크 설정", tankHist:"이력", exNote:"예시: T-20261103-01",
   cycWeek:"주 1회 (그 주 첫 출하)", cycMonth:"월 1회 (그 달 첫 출하)", spApply:"SP 11827 적용 (내부 육안검사 면제)", elCycle:"{el} 측정 주기",
   thisWeekDone:"이번 주 측정 완료", thisMonthDone:"이번 달 측정 완료", firstShipWeek:"이번 주 첫 출하 시", firstShipMonth:"이번 달 첫 출하 시",
-  elDue:"이번 출하 측정 대상", elSkip:"주기상 측정 제외", defCycles:"신규 탱크 기본 측정 주기",
+  elDue:"이번 출하 측정 대상", elSkip:"주기상 측정 제외", defCycles:"전체 기본 측정 주기",
+  cycDefault:"기본값 따름 (설정 탭)", defTag:"기본값", defNote:"탱크 설정에서 '기본값 따름'으로 둔 원소에 모두 적용됩니다. 특정 탱크만 다르게 하려면 탱크 등록부 → 탱크 설정에서 개별 주기를 고르세요.",
   ck1:"① 출하별 Fe 결과 확보", ck2:"② 탱크 번호·적재분과 결과 연결", ck3:"③ 재충전 전 및 하역 후 {d}일 이내 완료", ck4:"④ 최근 {n}회 출하분 이상 보관",
   c1ok:"Fe 결과와 ICP-MS 성적서 확보", c1noEv:"Fe 결과는 있으나 ICP-MS 성적서 첨부·링크 없음", c1pend:"분석 대기 · 기한 {d}", c1bad:"이 출하의 Fe 결과 없음",
   c2ok:"Tank ID·BOL·Sample ID·충전/채취 시각 연결", c2bad:"확인 필요: {x}", c3ok:"기한 내·재충전 전 완료", c3pend:"분석 대기 · 기한 {d}",
@@ -282,7 +283,8 @@ const I = {
   tankCfg:"Tank settings", tankHist:"History", exNote:"e.g. T-20261103-01",
   cycWeek:"Weekly (first shipment of the week)", cycMonth:"Monthly (first shipment of the month)", spApply:"Operated under SP 11827 (interior inspection exemption)", elCycle:"{el} measurement cycle",
   thisWeekDone:"Measured this week", thisMonthDone:"Measured this month", firstShipWeek:"First shipment this week", firstShipMonth:"First shipment this month",
-  elDue:"Measure on this shipment", elSkip:"Not required by cycle", defCycles:"Default cycles for new tanks",
+  elDue:"Measure on this shipment", elSkip:"Not required by cycle", defCycles:"Default measurement cycles (all tanks)",
+  cycDefault:"Use default (Settings)", defTag:"default", defNote:"Applies to every tank element set to 'Use default'. To give one tank its own cycle, choose it in Tank register → Tank settings.",
   ck1:"① Fe result secured for each shipment", ck2:"② Result linked to tank number and lading", ck3:"③ Completed before refill and within {d} days after unloading", ck4:"④ At least the {n} most recent shipments retained",
   c1ok:"Fe result and ICP-MS report on file", c1noEv:"Fe result entered but no ICP-MS report attached or linked", c1pend:"Analysis pending · due {d}", c1bad:"No Fe result for this shipment",
   c2ok:"Tank ID, BOL, sample ID and load/sample times linked", c2bad:"Check: {x}", c3ok:"Completed within deadline and before refill", c3pend:"Analysis pending · due {d}",
@@ -342,7 +344,8 @@ const ELS=["fe","cr","ni"], EL={fe:"Fe",cr:"Cr",ni:"Ni"};
 function analyzedEl(r,el){ const ty=r[el+"Type"]; return !!pd(r.analysisAt) && (ty==="Measured"||ty==="<LOQ") && num(r[el+"Val"])!==null; }
 function analyzed(r){ return analyzedEl(r,"fe"); }
 function defCycles(){ const s=S.settings; if(s.defCycles) return JSON.parse(JSON.stringify(s.defCycles)); const b=s.defCycle||{mode:"shipment",n:1}; return {fe:{...b},cr:{...b},ni:{...b}}; }
-function cyclesOf(tank){ const base=(tank&&tank.cycle)||{mode:"shipment",n:1}; const c=(tank&&tank.cycles)||{}; return {fe:c.fe||base, cr:c.cr||c.fe||base, ni:c.ni||c.fe||base}; }
+function rawCycles(tank){ const D={mode:"default",n:1}; const c=(tank&&tank.cycles)||null; if(c) return {fe:c.fe||D, cr:c.cr||D, ni:c.ni||D}; const b=(tank&&tank.cycle)||D; return {fe:b, cr:b, ni:b}; }
+function cyclesOf(tank){ const r=rawCycles(tank), d=defCycles(), o={}; ELS.forEach(el=>{ const v=r[el]; o[el] = (!v||v.mode==="default") ? (d[el]&&d[el].mode!=="default"?d[el]:{mode:"shipment",n:1}) : v; }); return o; }
 const isSp = tank => !tank || tank.sp!==false;
 const spWarn = tank => isSp(tank) && cyclesOf(tank).fe.mode!=="shipment";
 function periodKey(d,mode){ if(mode==="monthly") return d.getFullYear()+"-"+pad(d.getMonth()+1); const m=new Date(d.getFullYear(),d.getMonth(),d.getDate()); m.setDate(m.getDate()-((m.getDay()+6)%7)); return "W"+fd(m); }
@@ -570,7 +573,7 @@ function schedule(tank){
   const recs = S.records.filter(r=>r.tankId===tank.tankId);
   return {...el.fe, el, due: el.fe.due||el.cr.due||el.ni.due, count:recs.length, fe:recs.filter(r=>C(r).fe==="Fe >=50 - investigate").length, recent:recs.filter(r=>C(r).retain==="Recent - retain").length};
 }
-const cyclesCell = tank => { const cs=cyclesOf(tank); return ELS.map(el=>`<div><b class="mono">${EL[el]}</b> ${esc(cycleLabel(cs[el]))}</div>`).join(""); };
+const cyclesCell = tank => { const cs=cyclesOf(tank), rw=rawCycles(tank); return ELS.map(el=>`<div><b class="mono">${EL[el]}</b> ${esc(cycleLabel(cs[el]))}${rw[el].mode==="default"?` <span class="muted" style="font-size:11.5px">· ${t("defTag")}</span>`:""}</div>`).join(""); };
 const dueCell = s => ELS.map(el=>`<div style="margin:2px 0"><b class="mono">${EL[el]}</b> <span class="chip ${s.el[el].tone}">${esc(s.el[el].text)}</span></div>`).join("");
 function cycleLabel(cy){ cy=cy||{mode:"shipment"}; if(cy.mode==="weekly") return t("cycWeek"); if(cy.mode==="monthly") return t("cycMonth"); if(cy.mode==="every_n") return `${t("cycN").replace("N",cy.n)}`; if(cy.mode==="days") return t("cycDays").replace("N",cy.n); return t("cycShip"); }
 
@@ -605,7 +608,7 @@ function localApply(coll, id, data){
 function loadLocal(){
   try{ const j = JSON.parse(lsGet("sp_local")||"null"); if(j){ S.settings={...S.settings,...j.settings}; S.tanks=j.tanks||[]; S.records=j.records||[]; } }catch(e){}
   if(!S.tanks.length){
-    [["JNFU2400016","HCl"],["JNFU2400021","HF"],["JNFU2400037","HF"],["JNFU2400042","HNO3"]].forEach(([id,p])=>S.tanks.push({id:"t_"+id,tankId:id,product:p,lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",authRef:"",validUntil:"",procRef:"",active:true,sp:true,cycle:{mode:"shipment",n:1}}));
+    [["JNFU2400016","HCl"],["JNFU2400021","HF"],["JNFU2400037","HF"],["JNFU2400042","HNO3"]].forEach(([id,p])=>S.tanks.push({id:"t_"+id,tankId:id,product:p,lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",authRef:"",validUntil:"",procRef:"",active:true,sp:true}));
   }
 }
 /* evidence files live at sp11827/files/<id> as base64; records keep only metadata */
@@ -792,12 +795,13 @@ function vSet(){
       <label class="f"><span>${t("setPrep")}</span><input id="s_preparer" value="${esc(s.preparer)}"></label>
     </div>
     <h3>${t("defCycles")}</h3>
+    <p class="muted" style="margin:0;font-size:12.5px">${esc(t("defNote"))}</p>
     <div class="grid g3">${cycleInputs("s",dc)}</div>
     <div class="toolbar"><button class="btn primary" type="submit">${t("save")}</button></div>
   </form></section>`;
 }
 const needN = m => m==="every_n"||m==="days";
-const cycleInputs = (pfx,cs) => ELS.map(el=>F("",tf("elCycle",{el:EL[el]}),`<div style="display:flex;gap:6px"><select id="${pfx}_cyc_${el}" data-cyc="${pfx}_n_${el}">${cycOpts(cs[el].mode)}</select><input id="${pfx}_n_${el}" type="number" min="1" value="${esc(cs[el].n||1)}" style="width:76px" aria-label="N" title="N" ${needN(cs[el].mode)?"":"hidden"}></div>`)).join("");
+const cycleInputs = (pfx,cs) => ELS.map(el=>F("",tf("elCycle",{el:EL[el]}),`<div style="display:flex;gap:6px"><select id="${pfx}_cyc_${el}" data-cyc="${pfx}_n_${el}">${pfx==="k"?`<option value="default" ${cs[el].mode==="default"?"selected":""}>${t("cycDefault")}</option>`:""}${cycOpts(cs[el].mode)}</select><input id="${pfx}_n_${el}" type="number" min="1" value="${esc(cs[el].n||1)}" style="width:76px" aria-label="N" title="N" ${needN(cs[el].mode)?"":"hidden"}></div>`)).join("");
 const readCycles = pfx => { const o={}; ELS.forEach(el=>{ o[el]={mode:document.getElementById(`${pfx}_cyc_${el}`).value, n:Math.max(1,parseInt(document.getElementById(`${pfx}_n_${el}`).value)||1)}; }); return o; };
 const cycOpts = m => [["shipment","cycShip"],["weekly","cycWeek"],["monthly","cycMonth"],["every_n","cycN"],["days","cycDays"]].map(([k,l])=>`<option value="${k}" ${m===k?"selected":""}>${t(l)}</option>`).join("");
 
@@ -960,8 +964,8 @@ async function closeModal(cancel){
 let tDraft=null, tNew=false;
 function openTank(id){
   const x = id ? S.tanks.find(k=>k.id===id) : null; tNew=!x;
-  tDraft = x ? JSON.parse(JSON.stringify(x)) : {id:uid("t_"),tankId:"",product:"",lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",active:true,sp:true,cycles:defCycles()};
-  const cs=cyclesOf(tDraft);
+  tDraft = x ? JSON.parse(JSON.stringify(x)) : {id:uid("t_"),tankId:"",product:"",lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",active:true,sp:true,cycles:{fe:{mode:"default",n:1},cr:{mode:"default",n:1},ni:{mode:"default",n:1}}};
+  const cs=rawCycles(tDraft);
   document.getElementById("modalRoot").innerHTML = `<div class="modal"><form class="box" id="tankForm" novalidate>
    <div class="box-h"><h2>${tNew?t("newTank"):esc(tDraft.tankId)}</h2><button type="button" class="btn sm" data-act="closeModal">${t("close")}</button></div>
    <div class="box-b">
@@ -987,7 +991,7 @@ function openTank(id){
 }
 async function saveTank(){
   const g=k=>document.getElementById("k_"+k).value.trim();
-  const d={...tDraft, tankId:g("tankId"), product:g("product"), lining:g("lining"), dedicated:g("dedicated"), identified:g("identified"), party:g("party"), authRef:g("authRef"), validUntil:g("validUntil"), procRef:g("procRef"), active:g("active")!=="No", sp:g("sp")!=="No", cycles:readCycles("k")}; d.cycle=d.cycles.fe;
+  const d={...tDraft, tankId:g("tankId"), product:g("product"), lining:g("lining"), dedicated:g("dedicated"), identified:g("identified"), party:g("party"), authRef:g("authRef"), validUntil:g("validUntil"), procRef:g("procRef"), active:g("active")!=="No", sp:g("sp")!=="No", cycles:readCycles("k")}; delete d.cycle;
   if(!d.tankId){ toast(t("needTank")); return; }
   if(S.tanks.some(x=>x.id!==d.id && x.tankId===d.tankId)){ toast(t("dupTank")); return; }
   const id=d.id; delete d.id;
@@ -1198,7 +1202,7 @@ async function importXlsx(file){
     const tw = wb.Sheets["Tank Register"]; const th = tw && findHdr(tw,"Tank ID");
     if(th){ for(const row of th.rows){ const id=cellStr(row[0]); if(!id) continue; if(S.tanks.some(x=>x.tankId===id)){skip++;continue;}
       const g=n=>cellStr(row[th.hdr.findIndex(h=>h.startsWith(n))]);
-      await putDoc("tanks",uid("t_"),{tankId:id,product:g("Dedicated product"),lining:g("Lining"),dedicated:g("Dedicated service")||"Not confirmed",identified:g("Tank identified")||"Not confirmed",party:g("Party-status")||"Not confirmed",authRef:g("Authorization"),validUntil:g("Valid until").slice(0,10),procRef:g("Procedure"),active:true,sp:true,cycles:defCycles()}); nt++; } }
+      await putDoc("tanks",uid("t_"),{tankId:id,product:g("Dedicated product"),lining:g("Lining"),dedicated:g("Dedicated service")||"Not confirmed",identified:g("Tank identified")||"Not confirmed",party:g("Party-status")||"Not confirmed",authRef:g("Authorization"),validUntil:g("Valid until").slice(0,10),procRef:g("Procedure"),active:true,sp:true,cycles:{fe:{mode:"default",n:1},cr:{mode:"default",n:1},ni:{mode:"default",n:1}}}); nt++; } }
     const sw = wb.Sheets["Shipment Log"]; const sh = sw && findHdr(sw,"Record ID");
     if(!sh) throw new Error("no sheet");
     const norm = h => h.replace(/\s+/g," ").trim();
@@ -1263,7 +1267,7 @@ document.addEventListener("change", async ev=>{
   else if(el.id==="rpScope"){ rep.scope=el.value; renderReport(); }
   else if(el.id==="rpEv"){ rep.incEv=el.checked; renderReport(); }
   else if(el.dataset && el.dataset.cyc){ const n=document.getElementById(el.dataset.cyc); if(n) n.hidden=!needN(el.value); }
-  if(el.id==="k_sp"||el.id==="k_cyc_fe"){ const w=document.getElementById("cycWarnBox"); if(w) w.hidden = !(document.getElementById("k_sp").value==="Yes" && document.getElementById("k_cyc_fe").value!=="shipment"); }
+  if(el.id==="k_sp"||el.id==="k_cyc_fe"){ const w=document.getElementById("cycWarnBox"); if(w){ let m=document.getElementById("k_cyc_fe").value; if(m==="default") m=cyclesOf(null).fe.mode; w.hidden = !(document.getElementById("k_sp").value==="Yes" && m!=="shipment"); } }
   if(el.closest && el.closest("#recForm")) liveStatus();
 });
 document.addEventListener("input", ev=>{
