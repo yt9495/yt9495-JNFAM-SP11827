@@ -165,7 +165,7 @@ html{color-scheme:light} body{margin:0} img{max-width:100%} [hidden]{display:non
 <header class="top">
   <div class="wrap">
     <div class="brand">
-      <span class="eyebrow">DOT-SP 11827 · Fe / Cr / Ni</span>
+      <span class="eyebrow">DOT-SP 11827 · Fe / Cr / Ni / Mg</span>
       <h1 id="appTitle">JNFAM Tank ICP-MS Log</h1>
     </div>
     <div class="right">
@@ -299,7 +299,7 @@ const ST_KO = {
  "Refill time not recorded":"재충전 미기록","Refilled without analysis":"미분석 재충전","Check unload/refill order":"하역·재충전 순서 확인","Before recorded refill":"재충전 전 분석","Not before refill":"재충전 후 분석",
  "Recent - retain":"최근 보관 대상","Retain history":"이력 보관","Need tank/load time":"탱크·충전시각 필요",
  "Visual + spark records linked":"육안·스파크 기록 완료","Visual + spark records needed":"육안·스파크 기록 필요","External-source review recorded":"외부 오염원 검토 기록","Record corrective action":"시정조치 기록 필요","Investigate other sources":"다른 오염원 조사","No Fe-triggered action":"Fe 조치 불필요","Resolve Fe reporting / QC":"Fe 보고·QC 해결 필요",
- "Duplicate record ID":"Record ID 중복","Complete IDs / product":"ID·제품 입력 필요","Check tank register":"탱크 등록부 확인","Duplicate tank / shipment":"탱크·출하 중복","Check result type / limit":"결과 종류·한계 확인","Add load / sample details":"충전·시료 정보 필요","Check event sequence":"시각 순서 확인","Review sample stage":"시료 단계 검토","Fe analysis incomplete":"Fe 분석 미완료","Complete Cr / Ni status":"Cr·Ni 상태 입력","Confirm product basis":"원제품 기준 확인","QC review needed":"QC 검토 필요","Add analyst / report evidence":"분석자·성적서 필요","Reviewer entry needed":"검토자 입력 필요","Reviewer action pending":"검토 조치 대기","Check review decision":"검토 결정 확인","Review recorded":"검토 완료","Cr / Ni due by cycle":"Cr·Ni 주기 측정 필요"
+ "Duplicate record ID":"Record ID 중복","Complete IDs / product":"ID·제품 입력 필요","Check tank register":"탱크 등록부 확인","Duplicate tank / shipment":"탱크·출하 중복","Check result type / limit":"결과 종류·한계 확인","Add load / sample details":"충전·시료 정보 필요","Check event sequence":"시각 순서 확인","Review sample stage":"시료 단계 검토","Fe analysis incomplete":"Fe 분석 미완료","Complete Cr / Ni / Mg status":"Cr·Ni·Mg 상태 입력","Confirm product basis":"원제품 기준 확인","QC review needed":"QC 검토 필요","Add analyst / report evidence":"분석자·성적서 필요","Reviewer entry needed":"검토자 입력 필요","Reviewer action pending":"검토 조치 대기","Check review decision":"검토 결정 확인","Review recorded":"검토 완료","Cr / Ni / Mg due by cycle":"Cr·Ni·Mg 주기 측정 필요"
 };
 const OPT = {
  rtype:["Measured","<LOQ","Not tested"],
@@ -340,11 +340,11 @@ const DAY = 86400000;
 
 /* ---------------- status engine (ported from the Excel log) ---------------- */
 const num = v => (v===""||v===null||v===undefined) ? null : (isFinite(+v) ? +v : NaN);
-const ELS=["fe","cr","ni"], EL={fe:"Fe",cr:"Cr",ni:"Ni"};
+const ELS=["fe","cr","ni","mg"], EL={fe:"Fe",cr:"Cr",ni:"Ni",mg:"Mg"};
 function analyzedEl(r,el){ const ty=r[el+"Type"]; return !!pd(r.analysisAt) && (ty==="Measured"||ty==="<LOQ") && num(r[el+"Val"])!==null; }
 function analyzed(r){ return analyzedEl(r,"fe"); }
-function defCycles(){ const s=S.settings; if(s.defCycles) return JSON.parse(JSON.stringify(s.defCycles)); const b=s.defCycle||{mode:"shipment",n:1}; return {fe:{...b},cr:{...b},ni:{...b}}; }
-function rawCycles(tank){ const D={mode:"default",n:1}; const c=(tank&&tank.cycles)||null; if(c) return {fe:c.fe||D, cr:c.cr||D, ni:c.ni||D}; const b=(tank&&tank.cycle)||D; return {fe:b, cr:b, ni:b}; }
+function defCycles(){ const s=S.settings; const b=s.defCycle||{mode:"shipment",n:1}; if(s.defCycles){ const o=JSON.parse(JSON.stringify(s.defCycles)); ELS.forEach(el=>{ if(!o[el]) o[el]={...(o.ni||b)}; }); return o; } return {fe:{...b},cr:{...b},ni:{...b},mg:{...b}}; }
+function rawCycles(tank){ const D={mode:"default",n:1}; const c=(tank&&tank.cycles)||null; if(c) return {fe:c.fe||D, cr:c.cr||D, ni:c.ni||D, mg:c.mg||D}; const b=(tank&&tank.cycle)||D; return {fe:b, cr:b, ni:b, mg:D}; }
 function cyclesOf(tank){ const r=rawCycles(tank), d=defCycles(), o={}; ELS.forEach(el=>{ const v=r[el]; o[el] = (!v||v.mode==="default") ? (d[el]&&d[el].mode!=="default"?d[el]:{mode:"shipment",n:1}) : v; }); return o; }
 const isSp = tank => !tank || tank.sp!==false;
 const spWarn = tank => isSp(tank) && cyclesOf(tank).fe.mode!=="shipment";
@@ -407,13 +407,13 @@ function followUp(r, fe){
   if(fe==="Below Fe trigger"||fe==="Below Fe trigger (<LOQ)") return "No Fe-triggered action";
   return "Resolve Fe reporting / QC";
 }
-function entrySt(r, req, reqCr, reqNi){
+function entrySt(r, req, reqCr, reqNi, reqMg){
   if(!r.recordId) return "Complete IDs / product";
   if(S.records.filter(x=>x.recordId===r.recordId).length>1) return "Duplicate record ID";
   if(!r.tankId||!r.bol||!r.product||!r.sampleId) return "Complete IDs / product";
   if(S.tanks.filter(x=>x.tankId===r.tankId).length!==1) return "Check tank register";
   if(S.records.filter(x=>x.tankId===r.tankId && x.bol===r.bol).length>1) return "Duplicate tank / shipment";
-  for(const [ty,vv] of [[r.feType,r.feVal],[r.crType,r.crVal],[r.niType,r.niVal]]){
+  for(const [ty,vv] of [[r.feType,r.feVal],[r.crType,r.crVal],[r.niType,r.niVal],[r.mgType,r.mgVal]]){
     const v=num(vv); if(v!==null && (isNaN(v)||v<0)) return "Check result type / limit";
     if(ty==="Not tested" && v!==null) return "Check result type / limit";
     if(ty==="<LOQ" && v!==null && v<=0) return "Check result type / limit";
@@ -424,10 +424,10 @@ function entrySt(r, req, reqCr, reqNi){
   if(r.stage!=="After filling" && r.stage!=="During/after discharge") return "Review sample stage";
   if(req===false && !analyzed(r)) return "Not required by cycle";
   if(!r.feType||r.feType==="Not tested"||num(r.feVal)===null||!M) return "Fe analysis incomplete";
-  for(const [el,rq] of [["cr",reqCr],["ni",reqNi]]){
+  for(const [el,rq] of [["cr",reqCr],["ni",reqNi],["mg",reqMg]]){
     const ty=r[el+"Type"], v=num(r[el+"Val"]);
-    if(rq!==false && !analyzedEl(r,el)) return ty==="Not tested" ? "Cr / Ni due by cycle" : "Complete Cr / Ni status";
-    if(ty && ty!=="Not tested" && v===null) return "Complete Cr / Ni status";
+    if(rq!==false && !analyzedEl(r,el)) return ty==="Not tested" ? "Cr / Ni / Mg due by cycle" : "Complete Cr / Ni / Mg status";
+    if(ty && ty!=="Not tested" && v===null) return "Complete Cr / Ni / Mg status";
   }
   if(r.basis!=="Yes") return "Confirm product basis";
   if(r.qc!=="Accepted") return "QC review needed";
@@ -458,16 +458,16 @@ function recompute(){
     const tank = S.tanks.find(x=>x.tankId===tid);
     const asc = list.slice().sort((a,b)=> (pd(a.loadedAt)||0)-(pd(b.loadedAt)||0) || String(a.recordId).localeCompare(String(b.recordId)));
     const cys = cyclesOf(tank);
-    const rm = {fe:reqMapFor(asc,"fe",cys.fe), cr:reqMapFor(asc,"cr",cys.cr), ni:reqMapFor(asc,"ni",cys.ni)};
+    const rm = {fe:reqMapFor(asc,"fe",cys.fe), cr:reqMapFor(asc,"cr",cys.cr), ni:reqMapFor(asc,"ni",cys.ni), mg:reqMapFor(asc,"mg",cys.mg)};
     const desc = asc.filter(r=>pd(r.loadedAt)).slice().reverse();
     asc.forEach(r=>{
-      const req = rm.fe.get(r), reqCr = rm.cr.get(r), reqNi = rm.ni.get(r);
+      const req = rm.fe.get(r), reqCr = rm.cr.get(r), reqNi = rm.ni.get(r), reqMg = r.mgType===undefined ? false : rm.mg.get(r); /* records made before Mg was added are not back-flagged */
       const fe = feScreen(r);
       const rank = pd(r.loadedAt) ? desc.indexOf(r)+1 : null;
       calc.set(r.id, {
-        req, reqCr, reqNi, fe, deadline: deadline(r), t15: t15(r,req), refill: refillSt(r,req),
+        req, reqCr, reqNi, reqMg, fe, deadline: deadline(r), t15: t15(r,req), refill: refillSt(r,req),
         retain: (!r.tankId||!pd(r.loadedAt)) ? "Need tank/load time" : (rank<=N ? "Recent - retain" : "Retain history"),
-        follow: followUp(r, fe), entry: entrySt(r, req, reqCr, reqNi)
+        follow: followUp(r, fe), entry: entrySt(r, req, reqCr, reqNi, reqMg)
       });
     });
   }
@@ -541,7 +541,7 @@ function scheduleEl(tank, el){
   const asc = recs.filter(r=>pd(r.loadedAt)).sort((a,b)=>pd(a.loadedAt)-pd(b.loadedAt));
   const an = recs.filter(r=>analyzedEl(r,el)).sort((a,b)=>pd(b.analysisAt)-pd(a.analysisAt));
   const last = an[0] ? pd(an[0].analysisAt) : null;
-  const key = el==="fe"?"req":el==="cr"?"reqCr":"reqNi";
+  const key = {fe:"req",cr:"reqCr",ni:"reqNi",mg:"reqMg"}[el];
   const pending = recs.filter(r=>!analyzedEl(r,el) && C(r)[key]!==false && pd(r.loadedAt));
   const now = new Date(); const n=Math.max(1,+cy.n||1);
   let text, toneV="ok", due=false;
@@ -569,9 +569,9 @@ function scheduleEl(tank, el){
   return {text, tone:toneV, due, last};
 }
 function schedule(tank){
-  const el = {fe:scheduleEl(tank,"fe"), cr:scheduleEl(tank,"cr"), ni:scheduleEl(tank,"ni")};
+  const el = {fe:scheduleEl(tank,"fe"), cr:scheduleEl(tank,"cr"), ni:scheduleEl(tank,"ni"), mg:scheduleEl(tank,"mg")};
   const recs = S.records.filter(r=>r.tankId===tank.tankId);
-  return {...el.fe, el, due: el.fe.due||el.cr.due||el.ni.due, count:recs.length, fe:recs.filter(r=>C(r).fe==="Fe >=50 - investigate").length, recent:recs.filter(r=>C(r).retain==="Recent - retain").length};
+  return {...el.fe, el, due: el.fe.due||el.cr.due||el.ni.due||el.mg.due, count:recs.length, fe:recs.filter(r=>C(r).fe==="Fe >=50 - investigate").length, recent:recs.filter(r=>C(r).retain==="Recent - retain").length};
 }
 const cyclesCell = tank => { const cs=cyclesOf(tank), rw=rawCycles(tank); return ELS.map(el=>`<div><b class="mono">${EL[el]}</b> ${esc(cycleLabel(cs[el]))}${rw[el].mode==="default"?` <span class="muted" style="font-size:11.5px">· ${t("defTag")}</span>`:""}</div>`).join(""); };
 const dueCell = s => ELS.map(el=>`<div style="margin:2px 0"><b class="mono">${EL[el]}</b> <span class="chip ${s.el[el].tone}">${esc(s.el[el].text)}</span></div>`).join("");
@@ -725,11 +725,11 @@ function spPanel(tanks){
 }
 function recTable(list){
   return `<div class="tbl-wrap"><table class="t"><thead><tr>
-    <th>Record ID</th><th>Tank</th><th>BOL</th><th>${S.lang==="ko"?"하역":"Unloaded"}</th><th class="num">Fe</th><th class="num">Cr</th><th class="num">Ni</th>
+    <th>Record ID</th><th>Tank</th><th>BOL</th><th>${S.lang==="ko"?"하역":"Unloaded"}</th><th class="num">Fe</th><th class="num">Cr</th><th class="num">Ni</th><th class="num">Mg</th>
     <th>Fe</th><th>${S.settings.deadlineDays}${S.lang==="ko"?"일 기한":"-day"}</th><th>${S.lang==="ko"?"재충전 전":"Before refill"}</th><th>${S.lang==="ko"?"기록 상태":"Entry"}</th><th>${t("spCheck")} ①–④</th><th class="num">${t("evCount")}</th><th></th></tr></thead><tbody>
     ${list.map(r=>{const c=C(r);return `<tr class="click" data-act="editRec" data-id="${r.id}">
       <td class="mono">${esc(r.recordId)}</td><td class="mono">${esc(r.tankId)}</td><td>${esc(r.bol)}</td><td class="mono">${fd(r.unloadedAt)||"–"}</td>
-      <td class="num">${fmtRes(r.feType,r.feVal)}</td><td class="num">${fmtRes(r.crType,r.crVal)}</td><td class="num">${fmtRes(r.niType,r.niVal)}</td>
+      <td class="num">${fmtRes(r.feType,r.feVal)}</td><td class="num">${fmtRes(r.crType,r.crVal)}</td><td class="num">${fmtRes(r.niType,r.niVal)}</td><td class="num">${fmtRes(r.mgType,r.mgVal)}</td>
       <td>${chip(c.fe)}</td><td>${chip(c.t15)}</td><td>${chip(c.refill)}</td><td>${chip(c.entry)}</td><td>${ckBadges(r)}</td><td class="num">${(r.attachments||[]).length||"–"}</td>
       <td><button class="btn sm" data-act="recReport" data-id="${r.id}">${t("report")}</button></td></tr>`}).join("")}
   </tbody></table></div>`;
@@ -810,7 +810,7 @@ function vGuide(){
   return `<section class="panel guide">
   <div class="panel-h"><h2>${ko?"DOT-SP 11827 (32차 개정, 2020-04-23) 요구사항과 앱 반영":"DOT-SP 11827 (32nd rev., 2020-04-23): requirements and how this app covers them"}</h2></div>
   <div class="tbl-wrap"><table class="t"><thead><tr><th>${ko?"조항":"Section"}</th><th>${ko?"요구사항":"Requirement"}</th><th>${ko?"앱 반영":"In this app"}</th></tr></thead><tbody>
-   <tr><td class="mono">§7(b)(1)(i), (2)(i)</td><td style="white-space:normal">${ko?"마지막 적재분의 철(Fe) 오염을 ICP-MS 또는 GFAA로 분석":"Analyze iron (Fe) contamination of the last loading by ICP-MS or GFAA"}</td><td style="white-space:normal">${ko?"출하 기록마다 Fe/Cr/Ni 결과, 분석자, Run ID, 성적서 첨부":"Fe/Cr/Ni results, analyst, run ID and attached report per shipment"}</td></tr>
+   <tr><td class="mono">§7(b)(1)(i), (2)(i)</td><td style="white-space:normal">${ko?"마지막 적재분의 철(Fe) 오염을 ICP-MS 또는 GFAA로 분석":"Analyze iron (Fe) contamination of the last loading by ICP-MS or GFAA"}</td><td style="white-space:normal">${ko?"출하 기록마다 Fe/Cr/Ni/Mg 결과, 분석자, Run ID, 성적서 첨부":"Fe/Cr/Ni/Mg results, analyst, run ID and attached report per shipment"}</td></tr>
    <tr><td class="mono">§7(b)(1)(ii), (2)(ii)</td><td style="white-space:normal">${ko?"충전 후 Fe ≥ 50 ppb이면 라이닝 결함 의심 → 밸브·배관 등 다른 오염원 배제 후 육안 + 스파크 검사":"Fe ≥ 50 ppb after filling indicates a lining defect; if valves, piping and other sources are excluded, inspect visually and by spark test"}</td><td style="white-space:normal">${ko?"Fe 판정, 다른 오염원 조사, 육안·스파크 검사 일시와 증빙, 후속 상태":"Fe screening, other-source status, visual/spark timestamps and evidence, follow-up status"}</td></tr>
    <tr><td class="mono">§7(c)</td><td style="white-space:normal">${ko?"출하마다 오염 기록 유지. 재충전 전, 그리고 하역 후 15일 이내 분석 완료. 최근 5회 이상 출하 기록 보관":"Keep contamination records per shipment; complete analysis before refill and within 15 days after unloading; retain at least the five most recent shipments"}</td><td style="white-space:normal">${ko?"15일 기한·재충전 전 판정, 탱크별 최근 5건 표시, 기록 삭제 없이 이력 보관":"15-day and before-refill statuses, recent-5 flag per tank, full history kept"}</td></tr>
    <tr><td class="mono">§7(c)</td><td style="white-space:normal">${ko?"검사기관에 \"Meets criteria for exemption from interior visual inspection per DOT-SP 11827\" 확인":"Certify to the inspection facility: \"Meets criteria for exemption from interior visual inspection per DOT-SP 11827\""}</td><td style="white-space:normal">${ko?"조건 충족 시에만 보고서에 확인 문구 표시, 미충족 시 미결 항목 나열":"Report prints the statement only when all conditions are met; otherwise lists open items"}</td></tr>
@@ -818,15 +818,15 @@ function vGuide(){
    <tr><td class="mono">§8(b), 8(c), 10</td><td style="white-space:normal">${ko?"양면에 2인치 이상 \"DOT-SP 11827\" 표시, 시설·운송수단에 허가서 사본 비치":"Mark \"DOT-SP 11827\" on both sides (≥ 2 in.), keep a current copy at each facility and aboard each vehicle/vessel"}</td><td style="white-space:normal">${ko?"앱 범위 밖 (현장 점검 항목)":"Outside the app (site checks)"}</td></tr>
   </tbody></table></div>
   <h3 style="margin-top:16px">${ko?"측정 주기":"Measurement cycle"}</h3>
-  <p>${ko?"탱크별로 Fe·Cr·Ni 각각의 주기를 매 출하 / 주 1회 / 월 1회 / N회 출하마다 / N일마다 중에서 정합니다. 주 1회·월 1회는 그 주(월~일)·그 달의 첫 출하가 측정 대상이며, 같은 기간에 이미 측정한 출하가 있으면 나머지는 '주기상 측정 제외'로 표시됩니다. 측정 대상 출하는 하역 후 15일 이내, 재충전 전에 분석해야 합니다.":"Each tank sets its own Fe, Cr and Ni cycle: every shipment, weekly, monthly, every N shipments or every N days. Weekly/monthly make the first shipment of that week (Mon–Sun) or month the one to measure; once a shipment in the period is measured, the rest show 'Not required by cycle'. Shipments that must be measured follow the 15-day and before-refill rules."}</p>
-  <p>${ko?"SP 11827 §7(c)는 출하마다 Fe 분석 기록을 요구합니다. 'SP 11827 적용' 탱크의 Fe 주기를 매 출하가 아닌 값으로 두면 경고가 표시됩니다. Cr·Ni는 SP 요구 항목이 아니므로 주기를 자유롭게 정할 수 있습니다.":"SP 11827 §7(c) requires an Fe record for each shipment. Tanks marked as operating under SP 11827 show a warning when Fe is not on 'every shipment'. Cr and Ni are not SP requirements, so their cycle is up to you."}</p>
+  <p>${ko?"탱크별로 Fe·Cr·Ni·Mg 각각의 주기를 매 출하 / 주 1회 / 월 1회 / N회 출하마다 / N일마다 중에서 정합니다. 주 1회·월 1회는 그 주(월~일)·그 달의 첫 출하가 측정 대상이며, 같은 기간에 이미 측정한 출하가 있으면 나머지는 '주기상 측정 제외'로 표시됩니다. 측정 대상 출하는 하역 후 15일 이내, 재충전 전에 분석해야 합니다.":"Each tank sets its own Fe, Cr, Ni and Mg cycle: every shipment, weekly, monthly, every N shipments or every N days. Weekly/monthly make the first shipment of that week (Mon–Sun) or month the one to measure; once a shipment in the period is measured, the rest show 'Not required by cycle'. Shipments that must be measured follow the 15-day and before-refill rules."}</p>
+  <p>${ko?"SP 11827 §7(c)는 출하마다 Fe 분석 기록을 요구합니다. 'SP 11827 적용' 탱크의 Fe 주기를 매 출하가 아닌 값으로 두면 경고가 표시됩니다. Cr·Ni·Mg는 SP 요구 항목이 아니므로 주기를 자유롭게 정할 수 있습니다.":"SP 11827 §7(c) requires an Fe record for each shipment. Tanks marked as operating under SP 11827 show a warning when Fe is not on 'every shipment'. Cr, Ni and Mg are not SP requirements, so their cycle is up to you."}</p>
   <h3>${ko?"입력 원칙 (Excel 가이드와 동일)":"Recording rules (same as the Excel guide)"}</h3>
   <ul>
    <li>${ko?"희석·밀도 보정을 마친 원제품 기준 ppb를 입력합니다. ug/L와 ug/kg를 같다고 가정하지 않습니다.":"Enter final product-basis ppb after dilution/density correction. Do not assume ug/L equals ug/kg."}</li>
    <li>${ko?"<LOQ는 양수 보고한계를 입력하고, 미측정은 값을 비웁니다. ND를 0으로 바꾸지 않습니다.":"For <LOQ enter the positive reporting limit; leave Not tested blank. Never replace ND with zero."}</li>
    <li>${ko?"재충전 시각은 예정이 아닌 실제 시각입니다. 분석은 재충전보다 엄격히 앞서야 합니다.":"Refill time is the ACTUAL refill. Analysis must be strictly before refill."}</li>
    <li>${ko?"재측정 시 최초 결과를 덮어쓰지 말고 후속 보고서와 비고에 연결합니다.":"After a retest, keep the original result and link the retest in the investigation report and notes."}</li>
-   <li>${ko?"Cr·Ni는 추가 모니터링 항목으로 SP 수치 기준이 없습니다.":"Cr and Ni are advisory monitoring items with no SP limit."}</li>
+   <li>${ko?"Cr·Ni·Mg는 추가 모니터링 항목으로 SP 수치 기준이 없습니다.":"Cr, Ni and Mg are advisory monitoring items with no SP limit."}</li>
   </ul>
   <p class="muted">${ko?"이 앱의 판정은 개별 참여(party status) 승인이나 검사 면제 승인을 대신하지 않습니다. 승인 근거는 탱크 등록부에 별도로 관리하세요.":"Statuses here do not establish party-status approval or the inspection exemption itself. Keep authorization evidence in the tank register."}</p>
   <p class="ref">49 CFR §§ 180.352(b)(3), 180.605(c)(1) · 107.107 (party status)</p>
@@ -846,8 +846,9 @@ function openRecord(id){
   const r = id ? S.records.find(x=>x.id===id) : null;
   draftNew = !r; draftUploads=[];
   const t0 = S.tanks.find(x=>x.tankId===S.filter.tank) || S.tanks[0];
-  draft = r ? JSON.parse(JSON.stringify(r)) : {id:uid("r_"), recordId:nextRecordId(), tankId:t0?.tankId||"", product:t0?.product||"", stage:"After filling", feType:"Measured", crType:"", niType:"", basis:"Pending", qc:"Pending", decision:"Open", attachments:[]};
+  draft = r ? JSON.parse(JSON.stringify(r)) : {id:uid("r_"), recordId:nextRecordId(), tankId:t0?.tankId||"", product:t0?.product||"", stage:"After filling", feType:"Measured", crType:"", niType:"", mgType:"", basis:"Pending", qc:"Pending", decision:"Open", attachments:[]};
   draft.attachments = draft.attachments || [];
+  draft._legacyMg = !!r && r.mgType===undefined;
   renderRecordModal();
 }
 function renderRecordModal(){
@@ -875,7 +876,7 @@ function renderRecordModal(){
       ${F("",t("refillAt"),inp("r_refillAt",r.refillAt,"datetime-local"))}
     </div><p class="muted" style="margin:8px 0 0;font-size:12px" id="dlInfo"></p></fieldset>
     <fieldset><legend>${t("secRes")}</legend>
-      <div class="res-grid">${res("fe","Fe",r.feType,r.feVal)}${res("cr","Cr",r.crType,r.crVal)}${res("ni","Ni",r.niType,r.niVal)}</div>
+      <div class="res-grid">${res("fe","Fe",r.feType,r.feVal)}${res("cr","Cr",r.crType,r.crVal)}${res("ni","Ni",r.niType,r.niVal)}${res("mg","Mg",r.mgType,r.mgVal)}</div>
       <div class="grid g3" style="margin-top:12px">
         ${F("",t("basis"),sel("r_basis",OPT.basis,r.basis))}
         ${F("",t("qc"),sel("r_qc",OPT.qc,r.qc))}
@@ -905,15 +906,15 @@ function renderRecordModal(){
   const drop=document.getElementById("drop");
   if(drop){ ["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over")})); ["dragleave","drop"].forEach(e=>drop.addEventListener(e,()=>drop.classList.remove("over"))); drop.addEventListener("drop",ev=>{ev.preventDefault(); uploadFiles(ev.dataTransfer.files);}); document.getElementById("upFile").addEventListener("change",ev=>{uploadFiles(ev.target.files); ev.target.value="";}); }
 }
-const RF = ["recordId","tankId","bol","product","sampleId","customer","lot","loadedAt","sampleAt","stage","unloadedAt","analysisAt","refillAt","feType","feVal","crType","crVal","niType","niVal","basis","qc","analyst","runId","link","otherSrc","visualAt","sparkAt","invReport","reviewer","reviewedAt","decision","notes"];
-function readForm(){ RF.forEach(k=>{ const el=document.getElementById("r_"+k); if(el) draft[k]=el.value.trim? el.value.trim() : el.value; }); return draft; }
+const RF = ["recordId","tankId","bol","product","sampleId","customer","lot","loadedAt","sampleAt","stage","unloadedAt","analysisAt","refillAt","feType","feVal","crType","crVal","niType","niVal","mgType","mgVal","basis","qc","analyst","runId","link","otherSrc","visualAt","sparkAt","invReport","reviewer","reviewedAt","decision","notes"];
+function readForm(){ RF.forEach(k=>{ const el=document.getElementById("r_"+k); if(el) draft[k]=el.value.trim? el.value.trim() : el.value; }); if(draft._legacyMg && !draft.mgType && !draft.mgVal){ delete draft.mgType; delete draft.mgVal; } return draft; }
 function liveStatus(){
   const box=document.getElementById("liveStatus"); if(!box) return;
   readForm();
   const others = S.records.filter(x=>x.id!==draft.id);
   const saveRecs=S.records; S.records=[...others, draft]; recompute(); const c=C(draft); const ck=spChecks(draft); S.records=saveRecs; recompute();
   const lc=document.getElementById("liveCk"); if(lc) lc.innerHTML = ck.list.map((x,i)=>`<div class="ckrow"><span class="chip ${CK_TONE[x.st]}">${esc(ckLabel(i))}</span><span class="muted">${esc(x.note)}</span></div>`).join("");
-  box.innerHTML = [c.fe,c.t15,c.refill,c.follow,c.retain,c.entry].map(chip).join("") + ELS.map(el=>{ const rq = el==="fe"?c.req:el==="cr"?c.reqCr:c.reqNi; return `<span class="chip ${rq===false?"":"ok"}">${EL[el]}: ${esc(t(rq===false?"elSkip":"elDue"))}</span>`; }).join("");
+  box.innerHTML = [c.fe,c.t15,c.refill,c.follow,c.retain,c.entry].map(chip).join("") + ELS.map(el=>{ const rq = c[{fe:"req",cr:"reqCr",ni:"reqNi",mg:"reqMg"}[el]]; return `<span class="chip ${rq===false?"":"ok"}">${EL[el]}: ${esc(t(rq===false?"elSkip":"elDue"))}</span>`; }).join("");
   const dl=c.deadline; const info=document.getElementById("dlInfo");
   if(info) info.textContent = dl ? (S.lang==="ko"?`분석 기한: ${fdt(dl)} (하역 + ${S.settings.deadlineDays}일, 그리고 실제 재충전 전)`:`Analysis deadline: ${fdt(dl)} (unload + ${S.settings.deadlineDays} days, and before the actual refill)`) : "";
 }
@@ -945,7 +946,7 @@ async function uploadFiles(files){
   }
 }
 async function persistRecord(silent){
-  const r = {...draft}; delete r.id; r.updatedAt = new Date().toISOString();
+  const r = {...draft}; delete r.id; delete r._legacyMg; r.updatedAt = new Date().toISOString();
   await putDoc("records", draft.id, r);
   if(!silent) toast(t("saved"));
 }
@@ -964,7 +965,7 @@ async function closeModal(cancel){
 let tDraft=null, tNew=false;
 function openTank(id){
   const x = id ? S.tanks.find(k=>k.id===id) : null; tNew=!x;
-  tDraft = x ? JSON.parse(JSON.stringify(x)) : {id:uid("t_"),tankId:"",product:"",lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",active:true,sp:true,cycles:{fe:{mode:"default",n:1},cr:{mode:"default",n:1},ni:{mode:"default",n:1}}};
+  tDraft = x ? JSON.parse(JSON.stringify(x)) : {id:uid("t_"),tankId:"",product:"",lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",active:true,sp:true,cycles:{fe:{mode:"default",n:1},cr:{mode:"default",n:1},ni:{mode:"default",n:1},mg:{mode:"default",n:1}}};
   const cs=rawCycles(tDraft);
   document.getElementById("modalRoot").innerHTML = `<div class="modal"><form class="box" id="tankForm" novalidate>
    <div class="box-h"><h2>${tNew?t("newTank"):esc(tDraft.tankId)}</h2><button type="button" class="btn sm" data-act="closeModal">${t("close")}</button></div>
@@ -1032,6 +1033,7 @@ function recordPages(r, incEv){
     <tr><td><b>Fe</b></td><td>${esc(rOp(r.feType)||"–")}</td><td class="num">${resVal(r.feType,r.feVal)}</td><td>${esc(R("feCrit").replace("{v}",S.settings.feTrigger))}</td><td>${pill(c.fe)}</td></tr>
     <tr><td><b>Cr</b></td><td>${esc(rOp(r.crType)||"–")}</td><td class="num">${resVal(r.crType,r.crVal)}</td><td>${R("adv")}</td><td>${c.reqCr===false&&!analyzedEl(r,"cr")?pill("Not required by cycle"):"–"}</td></tr>
     <tr><td><b>Ni</b></td><td>${esc(rOp(r.niType)||"–")}</td><td class="num">${resVal(r.niType,r.niVal)}</td><td>${R("adv")}</td><td>${c.reqNi===false&&!analyzedEl(r,"ni")?pill("Not required by cycle"):"–"}</td></tr>
+    <tr><td><b>Mg</b></td><td>${esc(rOp(r.mgType)||"–")}</td><td class="num">${resVal(r.mgType,r.mgVal)}</td><td>${R("adv")}</td><td>${c.reqMg===false&&!analyzedEl(r,"mg")?pill("Not required by cycle"):"–"}</td></tr>
    </tbody></table>
    ${kv([[[R("method"),"ICP-MS"],[R("analyst"),esc(r.analyst||"–")],[R("run"),`<span class="mono">${esc(r.runId||"–")}</span>`]],[[R("basis"),esc(rOp(r.basis)||"–")],[R("qc"),esc(rOp(r.qc)||"–")],[R("s6"),String((r.attachments||[]).length)]]],"kvt3")}
    <h5>${R("cert")}</h5>
@@ -1084,8 +1086,8 @@ function tankPages(tank, scope, incEv){
     ${(()=>{ const k=tankC4(tank.tankId,rLang); return `<tr><td>${esc(ckLabel(3,rLang))}</td><td><span class="pill p-${ckP(k.st)}">${ckWord(k.st)}</span></td><td>${esc(k.note)}</td></tr>`; })()}
    </tbody></table>`:""}
    <h5>${R("shipments")} (${recs.length})</h5>
-   <table class="small"><thead><tr><th>Record</th><th>BOL</th><th>Unloaded</th><th>Analysis</th><th style="text-align:right">Fe</th><th style="text-align:right">Cr</th><th style="text-align:right">Ni</th><th>Fe screening</th><th>${S.settings.deadlineDays}-day</th><th>Refill</th><th>①②③④</th></tr></thead><tbody>
-    ${ch.length?ch.map(r=>{const c=C(r);return `<tr><td class="mono">${esc(r.recordId)}</td><td>${esc(r.bol)}</td><td class="mono">${fd(r.unloadedAt)}</td><td class="mono">${fd(r.analysisAt)}</td><td class="num">${resVal(r.feType,r.feVal)}</td><td class="num">${resVal(r.crType,r.crVal)}</td><td class="num">${resVal(r.niType,r.niVal)}</td><td>${pill(c.fe)}</td><td>${pill(c.t15)}</td><td>${pill(c.refill)}</td><td style="white-space:nowrap">${spChecks(r,rLang).list.map((x,i)=>`<span class="pill p-${ckP(x.st)}" style="padding:1px 4px">${i+1}</span>`).join(" ")}</td></tr>`}).join(""):`<tr><td colspan="11">–</td></tr>`}
+   <table class="small"><thead><tr><th>Record</th><th>BOL</th><th>Unloaded</th><th>Analysis</th><th style="text-align:right">Fe</th><th style="text-align:right">Cr</th><th style="text-align:right">Ni</th><th style="text-align:right">Mg</th><th>Fe screening</th><th>${S.settings.deadlineDays}-day</th><th>Refill</th><th>①②③④</th></tr></thead><tbody>
+    ${ch.length?ch.map(r=>{const c=C(r);return `<tr><td class="mono">${esc(r.recordId)}</td><td>${esc(r.bol)}</td><td class="mono">${fd(r.unloadedAt)}</td><td class="mono">${fd(r.analysisAt)}</td><td class="num">${resVal(r.feType,r.feVal)}</td><td class="num">${resVal(r.crType,r.crVal)}</td><td class="num">${resVal(r.niType,r.niVal)}</td><td class="num">${resVal(r.mgType,r.mgVal)}</td><td>${pill(c.fe)}</td><td>${pill(c.t15)}</td><td>${pill(c.refill)}</td><td style="white-space:nowrap">${spChecks(r,rLang).list.map((x,i)=>`<span class="pill p-${ckP(x.st)}" style="padding:1px 4px">${i+1}</span>`).join(" ")}</td></tr>`}).join(""):`<tr><td colspan="12">–</td></tr>`}
    </tbody></table>
    ${pi===n-1?`<div class="note">①–④: ${[0,1,2,3].map(i=>esc(ckLabel(i,rLang).slice(2))).join(" / ")}</div><div class="note">${esc(R("retainNote"))}</div><div class="sig"><div>${R("prep")}: ${esc(S.settings.preparer||"")}</div><div>${R("rev")}</div><div>${R("date")}</div></div>`:""}
    ${rFoot(pi+1,n)}</div>`);
@@ -1178,16 +1180,16 @@ async function buildPdf(printWin){
 }
 
 /* ---------------- Excel export / import ---------------- */
-const XH = ["Record ID","Tank ID","Shipment / BOL","Product / strength","Sample ID","Fe result type","Fe value / limit (ppb)","Cr result type","Cr value / limit (ppb)","Ni result type","Ni value / limit (ppb)","Fe screening","Analysis completed at","Loaded at","Unloaded at","Next ACTUAL refill at","Sample collected at","Sample stage","15-day deadline","15-day status","Before-refill status","Product basis confirmed?","Laboratory QC","Lab / analyst","ICP-MS report / run ID","Customer / receiver","Lot / batch","Retention group","Other-source investigation","Visual inspection at","Spark test at","Investigation / retest report","Follow-up record status","Reviewed by","Reviewed at","Review decision","Original result file / link","Notes","Entry status","Evidence files"];
-const XK = ["recordId","tankId","bol","product","sampleId","feType","feVal","crType","crVal","niType","niVal",null,"analysisAt","loadedAt","unloadedAt","refillAt","sampleAt","stage",null,null,null,"basis","qc","analyst","runId","customer","lot",null,"otherSrc","visualAt","sparkAt","invReport",null,"reviewer","reviewedAt","decision","link","notes"];
+const XH = ["Record ID","Tank ID","Shipment / BOL","Product / strength","Sample ID","Fe result type","Fe value / limit (ppb)","Cr result type","Cr value / limit (ppb)","Ni result type","Ni value / limit (ppb)","Mg result type","Mg value / limit (ppb)","Fe screening","Analysis completed at","Loaded at","Unloaded at","Next ACTUAL refill at","Sample collected at","Sample stage","15-day deadline","15-day status","Before-refill status","Product basis confirmed?","Laboratory QC","Lab / analyst","ICP-MS report / run ID","Customer / receiver","Lot / batch","Retention group","Other-source investigation","Visual inspection at","Spark test at","Investigation / retest report","Follow-up record status","Reviewed by","Reviewed at","Review decision","Original result file / link","Notes","Entry status","Evidence files"];
+const XK = ["recordId","tankId","bol","product","sampleId","feType","feVal","crType","crVal","niType","niVal","mgType","mgVal",null,"analysisAt","loadedAt","unloadedAt","refillAt","sampleAt","stage",null,null,null,"basis","qc","analyst","runId","customer","lot",null,"otherSrc","visualAt","sparkAt","invReport",null,"reviewer","reviewedAt","decision","link","notes"];
 const DTK = new Set(["analysisAt","loadedAt","unloadedAt","refillAt","sampleAt","visualAt","sparkAt","reviewedAt"]);
 async function exportXlsx(){
   if(!downloads){ toast(t("noDl")); return; }
   const rows = S.records.slice().sort((a,b)=>(pd(a.loadedAt)||0)-(pd(b.loadedAt)||0)).map(r=>{const c=C(r); return [
-    r.recordId,r.tankId,r.bol,r.product,r.sampleId,r.feType,num(r.feVal),r.crType,num(r.crVal),r.niType,num(r.niVal),c.fe,pd(r.analysisAt),pd(r.loadedAt),pd(r.unloadedAt),pd(r.refillAt),pd(r.sampleAt),r.stage,c.deadline,c.t15,c.refill,r.basis,r.qc,r.analyst,r.runId,r.customer,r.lot,c.retain,r.otherSrc,pd(r.visualAt),pd(r.sparkAt),r.invReport,c.follow,r.reviewer,pd(r.reviewedAt),r.decision,r.link,r.notes,c.entry,(r.attachments||[]).map(a=>a.name).join("; ")].map(v=>v===undefined?"":v)});
+    r.recordId,r.tankId,r.bol,r.product,r.sampleId,r.feType,num(r.feVal),r.crType,num(r.crVal),r.niType,num(r.niVal),r.mgType,num(r.mgVal),c.fe,pd(r.analysisAt),pd(r.loadedAt),pd(r.unloadedAt),pd(r.refillAt),pd(r.sampleAt),r.stage,c.deadline,c.t15,c.refill,r.basis,r.qc,r.analyst,r.runId,r.customer,r.lot,c.retain,r.otherSrc,pd(r.visualAt),pd(r.sparkAt),r.invReport,c.follow,r.reviewer,pd(r.reviewedAt),r.decision,r.link,r.notes,c.entry,(r.attachments||[]).map(a=>a.name).join("; ")].map(v=>v===undefined?"":v)});
   const ws = XLSX.utils.aoa_to_sheet([["JNFAM Tank ICP-MS Measurement Log"],[`Exported ${fdt(new Date())} · Fe trigger ${S.settings.feTrigger} ppb · ${S.settings.deadlineDays} days · recent ${S.settings.recentN}`],[],XH,...rows],{cellDates:true,dateNF:"yyyy-mm-dd hh:mm"});
   ws["!cols"]=XH.map(h=>({wch:Math.max(12,Math.min(28,h.length+2))}));
-  const wt = XLSX.utils.aoa_to_sheet([["Tank ID","Dedicated product","Lining material","Dedicated service confirmed?","Tank identified to authority?","Party-status approval","Authorization reference","Valid until","Procedure / evidence ref","SP 11827","Fe cycle","Fe N","Cr cycle","Cr N","Ni cycle","Ni N","In service"],...S.tanks.map(x=>{const cs=cyclesOf(x);return [x.tankId,x.product,x.lining,x.dedicated,x.identified,x.party,x.authRef,x.validUntil,x.procRef,isSp(x)?"Yes":"No",cs.fe.mode,cs.fe.n,cs.cr.mode,cs.cr.n,cs.ni.mode,cs.ni.n,x.active===false?"No":"Yes"]})]);
+  const wt = XLSX.utils.aoa_to_sheet([["Tank ID","Dedicated product","Lining material","Dedicated service confirmed?","Tank identified to authority?","Party-status approval","Authorization reference","Valid until","Procedure / evidence ref","SP 11827","Fe cycle","Fe N","Cr cycle","Cr N","Ni cycle","Ni N","Mg cycle","Mg N","In service"],...S.tanks.map(x=>{const cs=cyclesOf(x);return [x.tankId,x.product,x.lining,x.dedicated,x.identified,x.party,x.authRef,x.validUntil,x.procRef,isSp(x)?"Yes":"No",cs.fe.mode,cs.fe.n,cs.cr.mode,cs.cr.n,cs.ni.mode,cs.ni.n,cs.mg.mode,cs.mg.n,x.active===false?"No":"Yes"]})]);
   const wc = XLSX.utils.aoa_to_sheet([[COPY]]);
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Shipment Log"); XLSX.utils.book_append_sheet(wb,wt,"Tank Register"); XLSX.utils.book_append_sheet(wb,wc,"Copyright");
   const buf = XLSX.write(wb,{bookType:"xlsx",type:"array"});
@@ -1202,7 +1204,7 @@ async function importXlsx(file){
     const tw = wb.Sheets["Tank Register"]; const th = tw && findHdr(tw,"Tank ID");
     if(th){ for(const row of th.rows){ const id=cellStr(row[0]); if(!id) continue; if(S.tanks.some(x=>x.tankId===id)){skip++;continue;}
       const g=n=>cellStr(row[th.hdr.findIndex(h=>h.startsWith(n))]);
-      await putDoc("tanks",uid("t_"),{tankId:id,product:g("Dedicated product"),lining:g("Lining"),dedicated:g("Dedicated service")||"Not confirmed",identified:g("Tank identified")||"Not confirmed",party:g("Party-status")||"Not confirmed",authRef:g("Authorization"),validUntil:g("Valid until").slice(0,10),procRef:g("Procedure"),active:true,sp:true,cycles:{fe:{mode:"default",n:1},cr:{mode:"default",n:1},ni:{mode:"default",n:1}}}); nt++; } }
+      await putDoc("tanks",uid("t_"),{tankId:id,product:g("Dedicated product"),lining:g("Lining"),dedicated:g("Dedicated service")||"Not confirmed",identified:g("Tank identified")||"Not confirmed",party:g("Party-status")||"Not confirmed",authRef:g("Authorization"),validUntil:g("Valid until").slice(0,10),procRef:g("Procedure"),active:true,sp:true,cycles:{fe:{mode:"default",n:1},cr:{mode:"default",n:1},ni:{mode:"default",n:1},mg:{mode:"default",n:1}}}); nt++; } }
     const sw = wb.Sheets["Shipment Log"]; const sh = sw && findHdr(sw,"Record ID");
     if(!sh) throw new Error("no sheet");
     const norm = h => h.replace(/\s+/g," ").trim();
