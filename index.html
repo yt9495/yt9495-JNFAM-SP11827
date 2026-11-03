@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>JNFAM Tank ICP-MS Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!--
+  © 2025–2026 Young Tai Kang. All rights reserved. Unauthorized use, copying, modification, or distribution without the written permission of Young Tai Kang is prohibited.
+-->
+<style>
+/* Layout: compliance console — header band, tab rail, dense tables; report pages are fixed white A4 paper. */
+:root{
+  --bg:#f2f4f5; --surface:#ffffff; --surface-2:#e8ecee; --fg:#152027; --muted:#5a6a72; --line:#d2d9dc;
+  --accent:#0d5a6b; --accent-fg:#ffffff; --accent-soft:#dcecef;
+  --ok:#1d7349; --ok-bg:#ddf1e5; --warn:#9a5b00; --warn-bg:#fbeccd; --bad:#b0261c; --bad-bg:#fbe1dd; --mute-bg:#e8ecee;
+  --font:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1416; --surface:#162024; --surface-2:#1d292e; --fg:#e2e9eb; --muted:#93a3aa; --line:#2b3a40;
+  --accent:#57b6ca; --accent-fg:#06222a; --accent-soft:#163740;
+  --ok:#62cb93; --ok-bg:#143326; --warn:#efb457; --warn-bg:#3a2b10; --bad:#ff8b7c; --bad-bg:#401a16; --mute-bg:#223036;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1416; --surface:#162024; --surface-2:#1d292e; --fg:#e2e9eb; --muted:#93a3aa; --line:#2b3a40;
+  --accent:#57b6ca; --accent-fg:#06222a; --accent-soft:#163740;
+  --ok:#62cb93; --ok-bg:#143326; --warn:#efb457; --warn-bg:#3a2b10; --bad:#ff8b7c; --bad-bg:#401a16; --mute-bg:#223036;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:12px}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+.brand h1{margin:0;font-size:18px;font-weight:700;text-wrap:balance}
+.top .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;border-top:1px solid var(--line)}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:10px 14px;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+main{padding-block:20px 40px;display:flex;flex-direction:column;gap:20px}
+h2{font-size:16px;margin:0;font-weight:600}
+h3{font-size:14px;margin:0;font-weight:600}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:var(--r);padding:7px 12px;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select,input,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;min-width:0;width:100%}
+textarea{min-height:64px;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);min-width:0}
+label.f > span{font-weight:500}
+label.f.req > span::after{content:" *";color:var(--bad)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.panel-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;border-left:4px solid var(--line)}
+.kpi.bad{border-left-color:var(--bad)} .kpi.warn{border-left-color:var(--warn)} .kpi.ok{border-left-color:var(--ok)}
+.kpi .v{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.2}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;background:var(--mute-bg);color:var(--muted)}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th{text-align:left;font-weight:600;font-size:12px;color:var(--muted);background:var(--surface-2);padding:8px 10px;white-space:nowrap;position:sticky;top:0}
+table.t td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+table.t tr.click{cursor:pointer} table.t tr.click:hover td{background:var(--accent-soft)}
+td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar select,.toolbar input{width:auto}
+.banner{border-radius:8px;padding:10px 14px;font-size:13px;border:1px solid}
+.banner.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.banner.info{background:var(--accent-soft);color:var(--fg);border-color:var(--line)}
+.tanks{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.tank{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.tank .id{font-family:var(--mono);font-weight:600;font-size:15px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+/* modal */
+.modal{position:fixed;inset:0;z-index:20;background:rgba(10,18,22,.55);display:flex;justify-content:center;align-items:flex-start;padding:calc(env(safe-area-inset-top,0px) + 24px) max(12px,env(safe-area-inset-right,0px)) 24px max(12px,env(safe-area-inset-left,0px));overflow-y:auto}
+.modal .box{background:var(--bg);border:1px solid var(--line);border-radius:10px;width:min(980px,100%);display:flex;flex-direction:column}
+.modal .box.wide{width:min(1100px,100%)}
+.box-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface);border-radius:10px 10px 0 0;flex-wrap:wrap}
+.box-h h2{flex:1;min-width:0}
+.box-b{padding:16px;display:flex;flex-direction:column;gap:16px}
+.box-f{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface);border-radius:0 0 10px 10px;position:sticky;bottom:0}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:12px 14px 14px;margin:0;background:var(--surface);min-width:0}
+legend{font-weight:600;font-size:13px;padding:0 6px}
+.status-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.res{border:1px solid var(--line);border-radius:6px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--bg)}
+.res h4{grid-column:1/-1;margin:0;font-family:var(--mono);font-size:13px}
+.att{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg)}
+.att .nm{flex:1;min-width:140px;overflow-wrap:anywhere}
+.att img{width:44px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:40;font-size:13px;max-width:calc(100% - 32px)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{border:0;background:var(--surface);color:var(--muted);padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.guide p,.guide li{max-width:78ch}
+.guide ol,.guide ul{padding-left:20px;margin:6px 0}
+.guide .ref{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.ck{display:inline-flex;gap:3px}
+.ck i{font-style:normal;min-width:22px;height:22px;padding:0 4px;border-radius:4px;display:inline-grid;place-items:center;font-size:12px;font-weight:600;background:var(--mute-bg);color:var(--muted)}
+.ck i.ok{background:var(--ok-bg);color:var(--ok)} .ck i.warn{background:var(--warn-bg);color:var(--warn)} .ck i.bad{background:var(--bad-bg);color:var(--bad)}
+.ckrow{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:4px 10px;align-items:start;font-size:13px}
+.ckrow .chip{white-space:normal}
+@media (max-width:560px){.ckrow{grid-template-columns:1fr}}
+footer.cr{font-size:11.5px;color:var(--muted);padding-block:16px 28px;border-top:1px solid var(--line)}
+.preview-pages{display:flex;flex-direction:column;align-items:center;gap:14px;overflow-x:auto}
+.pv{width:100%;max-width:794px}
+.pv .scaler{transform-origin:top left}
+@media (max-width:640px){.modal{padding:0}.modal .box{border-radius:0;min-height:100%}.box-h,.box-f{border-radius:0}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ===== Report paper (fixed print colors, not themed: it is a white A4 sheet) ===== */
+.rhost{position:fixed;left:-12000px;top:0;width:794px;z-index:-1}
+.rpage{width:794px;height:1123px;background:#ffffff;color:#111a1f;font-family:var(--font);font-size:11px;line-height:1.45;padding:44px 48px 40px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.rpage .rh{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #0d5a6b;padding-bottom:10px}
+.rpage .rh .co{font-weight:700;font-size:15px;color:#0d5a6b}
+.rpage .rh .ad{color:#4d5c63;font-size:10px}
+.rpage .rh .tt{text-align:right}
+.rpage .rh .tt b{display:block;font-size:13.5px}
+.rpage .rh .tt .mono{font-size:10px;color:#4d5c63}
+.rpage h5{margin:0;font-size:11.5px;font-weight:700;color:#0d5a6b;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #c9d3d7;padding-bottom:3px}
+.rpage table{border-collapse:collapse;width:100%}
+.rpage td,.rpage th{border:1px solid #c9d3d7;padding:4px 6px;text-align:left;vertical-align:top}
+.rpage th{background:#eef2f3;font-weight:600;color:#33434a;width:auto}
+.rpage .kvt th{width:22%} .rpage .kvt3 th{width:12.5%} .rpage .kvt3 td{width:20.8%}
+.rpage .num{font-family:var(--mono);text-align:right}
+.rpage .pill{display:inline-block;padding:1px 6px;border-radius:3px;font-weight:600;font-size:10px}
+.rpage .p-ok{background:#ddf1e5;color:#1d7349} .rpage .p-warn{background:#fbeccd;color:#8a5200} .rpage .p-bad{background:#fbe1dd;color:#a3231a} .rpage .p-mute{background:#eceff0;color:#56656b}
+.rpage .cert{border:2px solid #1d7349;background:#f1faf4;padding:10px 12px;border-radius:4px}
+.rpage .cert.no{border-color:#9a5b00;background:#fff8ea}
+.rpage .cert b{font-size:12px}
+.rpage .sig{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:auto}
+.rpage .sig div{border-top:1px solid #33434a;padding-top:4px;font-size:10px;color:#4d5c63;height:44px}
+.rpage .rf{margin-top:auto;border-top:1px solid #c9d3d7;padding-top:6px;display:flex;justify-content:space-between;gap:12px;font-size:8.5px;color:#6b7a80}
+.rpage .note{font-size:9.5px;color:#4d5c63}
+.rpage .small td,.rpage .small th{font-size:9.5px;padding:3px 4px}
+html{color-scheme:light} body{margin:0} img{max-width:100%} [hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <span class="eyebrow">DOT-SP 11827 · Fe / Cr / Ni</span>
+      <h1 id="appTitle">JNFAM Tank ICP-MS Log</h1>
+    </div>
+    <div class="right">
+      <span id="storeChip" class="chip">…</span>
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="langKo" aria-pressed="true">한국어</button>
+        <button type="button" id="langEn" aria-pressed="false">English</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap"><nav class="tabs" id="tabs" role="tablist"></nav></div>
+</header>
+
+<main class="wrap" id="main"></main>
+<div class="wrap"><footer class="cr">© 2025–2026 Young Tai Kang. All rights reserved. Unauthorized use, copying, modification, or distribution without the written permission of Young Tai Kang is prohibited.</footer></div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script type="module">
+/* © 2025–2026 Young Tai Kang. All rights reserved. Unauthorized use, copying, modification, or distribution without the written permission of Young Tai Kang is prohibited. */
+(async function(){
+"use strict";
+const COPY = "© 2025–2026 Young Tai Kang. All rights reserved. Unauthorized use, copying, modification, or distribution without the written permission of Young Tai Kang is prohibited.";
+
+/* ---------------- i18n ---------------- */
+const I = {
+ ko:{
+  tabDash:"대시보드", tabLog:"출하·측정 기록", tabTanks:"탱크 등록부", tabSet:"설정", tabGuide:"SP 11827 요약",
+  storeShared:"Firebase 실시간 동기화", storeLocal:"Firebase 연결 안 됨 (이 브라우저에만 저장)", storeLoading:"저장소 연결 중",
+  kShip:"기록된 출하", kFe:"Fe ≥ 기준 (조사)", kTiming:"기한 경보", kOpen:"미완료 기록", kDue:"측정 예정/필요",
+  sched:"탱크별 측정 일정", attention:"조치가 필요한 기록", noAttention:"조치가 필요한 기록이 없습니다.",
+  newRec:"새 출하 기록", newTank:"탱크 추가", search:"검색 (Record/BOL/Sample/Lot)", allTanks:"전체 탱크",
+  fAll:"전체", fAttn:"조치 필요", fFe:"Fe ≥ 기준", fRecent:"최근 보관 대상",
+  exportX:"Excel 내보내기", importX:"Excel 가져오기", report:"보고서", edit:"수정", tankReport:"탱크 이력 보고서",
+  emptyLog:"아직 기록이 없습니다. '새 출하 기록'으로 첫 출하를 등록하거나, 기존 Excel 로그를 가져오세요.",
+  emptyTanks:"등록된 탱크가 없습니다. '탱크 추가'로 탱크를 등록하세요.",
+  cycle:"측정 주기", cycShip:"매 출하마다 (SP 11827 기준)", cycN:"N회 출하마다", cycDays:"N일마다", cycleN:"N 값",
+  cycWarn:"SP 적용 탱크인데 Fe 주기가 '매 출하'가 아닙니다. SP 11827 §7(c)는 출하마다 Fe 분석을 재충전 전·하역 후 15일 이내에 완료하도록 요구합니다.",
+  lastMeas:"최근 측정", nextDue:"다음 측정", shipCnt:"출하 수", feCnt:"Fe ≥ 기준", recent:"최근 보관",
+  dueNow:"측정 필요", dueNext:"다음 출하 시", dueInShip:"{n}회 출하 후", dueOn:"{d}까지", overdue:"기한 초과",
+  pending:"분석 대기 {n}건",
+  secShip:"출하 정보", secTime:"일정 (실제 시각, ET)", secRes:"ICP-MS 결과 (원제품 기준 ppb)", secEv:"증빙 첨부 (ICP-MS 성적서 등)",
+  secInv:"Fe 조사 / 육안·스파크 검사", secRev:"검토", secStat:"자동 판정",
+  recordId:"Record ID", tankId:"Tank ID", bol:"Shipment / BOL", product:"제품 / 농도", sampleId:"Sample ID",
+  customer:"고객 / 수령처", lot:"Lot / Batch",
+  loadedAt:"충전(Loaded)", sampleAt:"시료 채취", stage:"시료 채취 단계", unloadedAt:"하역(Unloaded)", analysisAt:"분석 완료", refillAt:"다음 실제 재충전",
+  rType:"결과 종류", rVal:"값 / 보고한계 (ppb)", basis:"원제품 기준 확인", qc:"분석 QC", analyst:"분석기관 / 분석자", runId:"ICP-MS 보고서 / Run ID",
+  link:"원본 파일 경로 / 링크 (선택)", other:"다른 오염원 조사", visualAt:"육안 검사 일시", sparkAt:"스파크 검사 일시", invRep:"조사 / 재측정 보고서",
+  reviewer:"검토자", reviewedAt:"검토 일시", decision:"검토 결정", notes:"비고",
+  save:"저장", cancel:"취소", del:"삭제", confirmDel:"정말 삭제", close:"닫기",
+  upload:"파일 선택", dropHint:"ICP-MS 성적서(PDF)나 사진을 끌어다 놓거나 파일을 선택하세요. 파일당 7 MB까지.",
+  attKind:"구분", kIcp:"ICP-MS 성적서", kVis:"육안 검사", kSpark:"스파크 검사", kOther:"기타",
+  noUpload:"Firebase에 연결되지 않아 파일을 첨부할 수 없습니다.",
+  uploading:"업로드 중…", uploaded:"첨부했습니다", saved:"저장했습니다", deleted:"삭제했습니다",
+  lining:"라이닝 재질", dedicated:"전용 사용 확인", identified:"당국에 탱크 서면 식별", party:"Party status 승인", authRef:"승인 참조번호", validUntil:"유효기간", procRef:"절차 / 근거 문서", active:"사용 중",
+  setTrig:"Fe 조사 기준 (ppb)", setDays:"하역 후 분석 기한 (일)", setRecent:"탱크별 최소 보관 출하 수", setTz:"기록 시간대",
+  setCo:"회사명 (보고서 머리글)", setAddr:"주소 (보고서 머리글)", setPrep:"보고서 작성자 기본값", setDefCycle:"신규 탱크 기본 측정 주기",
+  setNote:"Fe 50 ppb · 15일 · 최근 5건은 DOT-SP 11827 값입니다. 바꾸면 사내 기준이 되며 보고서에 표시됩니다.",
+  preview:"보고서 미리보기", rLang:"보고서 언어", incEv:"증빙 파일을 PDF 뒤에 붙이기", dlPdf:"PDF 다운로드", building:"PDF 만드는 중…",
+  noDl:"이 화면에서는 파일 저장이 지원되지 않습니다.", scope:"범위", scRecent:"최근 보관 대상", scAll:"전체 이력",
+  pdfOk:"PDF를 저장했습니다", pdfFail:"PDF를 만들지 못했습니다: ", evFail:"일부 증빙 파일을 불러오지 못해 목록에만 표시했습니다: ",
+  imported:"가져오기 완료: 탱크 {t}건, 기록 {r}건 (중복 {s}건 건너뜀)", importFail:"Excel을 읽지 못했습니다. 'Shipment Log' 시트 형식인지 확인하세요.",
+  dupId:"같은 Record ID가 이미 있습니다.", needId:"Record ID와 Tank ID는 필수입니다.", needTank:"Tank ID는 필수입니다.", dupTank:"같은 Tank ID가 이미 있습니다.",
+  autoId:"자동 생성", evCount:"증빙", printHint:"'인쇄'를 누르면 증빙까지 합친 PDF가 새 탭에 열립니다. 그 탭에서 인쇄하세요. 증빙 PDF·사진은 보고서 뒤에 페이지로 붙습니다.", printBtn:"인쇄 (PDF 열기)", tooBig:"7 MB를 넘는 파일은 첨부할 수 없습니다: ",
+  tankCfg:"탱크 설정", tankHist:"이력", exNote:"예시: T-20261103-01",
+  cycWeek:"주 1회 (그 주 첫 출하)", cycMonth:"월 1회 (그 달 첫 출하)", spApply:"SP 11827 적용 (내부 육안검사 면제)", elCycle:"{el} 측정 주기",
+  thisWeekDone:"이번 주 측정 완료", thisMonthDone:"이번 달 측정 완료", firstShipWeek:"이번 주 첫 출하 시", firstShipMonth:"이번 달 첫 출하 시",
+  elDue:"이번 출하 측정 대상", elSkip:"주기상 측정 제외", defCycles:"신규 탱크 기본 측정 주기",
+  ck1:"① 출하별 Fe 결과 확보", ck2:"② 탱크 번호·적재분과 결과 연결", ck3:"③ 재충전 전 및 하역 후 {d}일 이내 완료", ck4:"④ 최근 {n}회 출하분 이상 보관",
+  c1ok:"Fe 결과와 ICP-MS 성적서 확보", c1noEv:"Fe 결과는 있으나 ICP-MS 성적서 첨부·링크 없음", c1pend:"분석 대기 · 기한 {d}", c1bad:"이 출하의 Fe 결과 없음",
+  c2ok:"Tank ID·BOL·Sample ID·충전/채취 시각 연결", c2bad:"확인 필요: {x}", c3ok:"기한 내·재충전 전 완료", c3pend:"분석 대기 · 기한 {d}",
+  c4ok:"최근 {n}회 보관 대상, 해당 탱크 최근분 결과 모두 보관", c4hist:"최근 {n}회 밖 이력 (삭제하지 않고 보관)", c4bad:"이 탱크 최근 {n}회 중 Fe 결과·성적서 누락 {k}건", c4pend:"이 탱크 최근 {n}회 중 분석 대기 {k}건", c4few:"출하 {n}회 (5회 미만, 전량 보관)", c4all:"최근 {n}회 모두 결과 보관",
+  na:"SP 미적용 탱크", spCheck:"SP 점검", spPanel:"SP 11827 점검 현황 (탱크별)", delRecent:"최근 보관 대상 – 다시 눌러 삭제", refillW:"재충전",
+  ckHint:"①~③은 출하 기록 수 기준 적합/전체입니다. 칸에 마우스를 올리면 사유가 보입니다.",
+ },
+ en:{
+  tabDash:"Dashboard", tabLog:"Shipment log", tabTanks:"Tank register", tabSet:"Settings", tabGuide:"SP 11827 summary",
+  storeShared:"Firebase live sync", storeLocal:"Firebase not connected (this browser only)", storeLoading:"Connecting storage",
+  kShip:"Shipments recorded", kFe:"Fe ≥ trigger (investigate)", kTiming:"Timing alerts", kOpen:"Incomplete records", kDue:"Measurements due",
+  sched:"Measurement schedule by tank", attention:"Records needing action", noAttention:"No records need action.",
+  newRec:"New shipment record", newTank:"Add tank", search:"Search (Record/BOL/Sample/Lot)", allTanks:"All tanks",
+  fAll:"All", fAttn:"Needs action", fFe:"Fe ≥ trigger", fRecent:"Recent – retain",
+  exportX:"Export Excel", importX:"Import Excel", report:"Report", edit:"Edit", tankReport:"Tank history report",
+  emptyLog:"No records yet. Add the first shipment with 'New shipment record' or import your existing Excel log.",
+  emptyTanks:"No tanks registered. Use 'Add tank'.",
+  cycle:"Measurement cycle", cycShip:"Every shipment (SP 11827)", cycN:"Every N shipments", cycDays:"Every N days", cycleN:"N",
+  cycWarn:"This tank operates under SP 11827 but its Fe cycle is not 'every shipment'. §7(c) requires Fe analysis for each shipment, before refill and within 15 days after unloading.",
+  lastMeas:"Last measured", nextDue:"Next measurement", shipCnt:"Shipments", feCnt:"Fe ≥ trigger", recent:"Recent kept",
+  dueNow:"Due now", dueNext:"At next shipment", dueInShip:"After {n} more shipment(s)", dueOn:"By {d}", overdue:"Overdue",
+  pending:"{n} awaiting analysis",
+  secShip:"Shipment", secTime:"Timeline (actual times, ET)", secRes:"ICP-MS results (product-basis ppb)", secEv:"Evidence (ICP-MS reports etc.)",
+  secInv:"Fe investigation / visual & spark", secRev:"Review", secStat:"Calculated status",
+  recordId:"Record ID", tankId:"Tank ID", bol:"Shipment / BOL", product:"Product / strength", sampleId:"Sample ID",
+  customer:"Customer / receiver", lot:"Lot / batch",
+  loadedAt:"Loaded at", sampleAt:"Sample collected at", stage:"Sample stage", unloadedAt:"Unloaded at", analysisAt:"Analysis completed at", refillAt:"Next ACTUAL refill at",
+  rType:"Result type", rVal:"Value / limit (ppb)", basis:"Product basis confirmed", qc:"Laboratory QC", analyst:"Lab / analyst", runId:"ICP-MS report / run ID",
+  link:"Original file path / link (optional)", other:"Other-source investigation", visualAt:"Visual inspection at", sparkAt:"Spark test at", invRep:"Investigation / retest report",
+  reviewer:"Reviewed by", reviewedAt:"Reviewed at", decision:"Review decision", notes:"Notes",
+  save:"Save", cancel:"Cancel", del:"Delete", confirmDel:"Confirm delete", close:"Close",
+  upload:"Choose files", dropHint:"Drop ICP-MS reports (PDF) or photos here, or choose files. Up to 7 MB each.",
+  attKind:"Type", kIcp:"ICP-MS report", kVis:"Visual inspection", kSpark:"Spark test", kOther:"Other",
+  noUpload:"Firebase isn't connected, so files can't be attached.",
+  uploading:"Uploading…", uploaded:"Attached", saved:"Saved", deleted:"Deleted",
+  lining:"Lining material", dedicated:"Dedicated service confirmed", identified:"Tank identified to authority", party:"Party-status approval", authRef:"Authorization ref.", validUntil:"Valid until", procRef:"Procedure / evidence ref.", active:"In service",
+  setTrig:"Fe investigation trigger (ppb)", setDays:"Analysis deadline after unloading (days)", setRecent:"Minimum recent shipments kept per tank", setTz:"Timestamp time zone",
+  setCo:"Company name (report header)", setAddr:"Address (report header)", setPrep:"Default report preparer", setDefCycle:"Default cycle for new tanks",
+  setNote:"Fe 50 ppb · 15 days · recent 5 are the DOT-SP 11827 values. Changing them makes an internal rule and is shown on reports.",
+  preview:"Report preview", rLang:"Report language", incEv:"Append evidence files to the PDF", dlPdf:"Download PDF", building:"Building PDF…",
+  noDl:"Saving files isn't supported in this view.", scope:"Scope", scRecent:"Recent – retain", scAll:"Full history",
+  pdfOk:"PDF saved", pdfFail:"Could not build the PDF: ", evFail:"Some evidence files could not be loaded and are listed only: ",
+  imported:"Imported {t} tank(s), {r} record(s); skipped {s} duplicate(s)", importFail:"Could not read the workbook. Check that it has a 'Shipment Log' sheet.",
+  dupId:"That Record ID already exists.", needId:"Record ID and Tank ID are required.", needTank:"Tank ID is required.", dupTank:"That Tank ID already exists.",
+  autoId:"Generate", evCount:"Evidence", printHint:"Print opens the combined PDF (with evidence) in a new tab; print from there. Evidence PDFs and photos are appended as pages.", printBtn:"Print (open PDF)", tooBig:"Files over 7 MB can't be attached: ",
+  tankCfg:"Tank settings", tankHist:"History", exNote:"e.g. T-20261103-01",
+  cycWeek:"Weekly (first shipment of the week)", cycMonth:"Monthly (first shipment of the month)", spApply:"Operated under SP 11827 (interior inspection exemption)", elCycle:"{el} measurement cycle",
+  thisWeekDone:"Measured this week", thisMonthDone:"Measured this month", firstShipWeek:"First shipment this week", firstShipMonth:"First shipment this month",
+  elDue:"Measure on this shipment", elSkip:"Not required by cycle", defCycles:"Default cycles for new tanks",
+  ck1:"① Fe result secured for each shipment", ck2:"② Result linked to tank number and lading", ck3:"③ Completed before refill and within {d} days after unloading", ck4:"④ At least the {n} most recent shipments retained",
+  c1ok:"Fe result and ICP-MS report on file", c1noEv:"Fe result entered but no ICP-MS report attached or linked", c1pend:"Analysis pending · due {d}", c1bad:"No Fe result for this shipment",
+  c2ok:"Tank ID, BOL, sample ID and load/sample times linked", c2bad:"Check: {x}", c3ok:"Completed within deadline and before refill", c3pend:"Analysis pending · due {d}",
+  c4ok:"Within the {n} most recent; this tank's recent results all on file", c4hist:"Older than the {n} most recent (kept)", c4bad:"{k} of this tank's {n} most recent shipments lack Fe result/report", c4pend:"{k} of this tank's {n} most recent shipments awaiting analysis", c4few:"{n} shipment(s) so far (all retained)", c4all:"All {n} most recent shipments on file",
+  na:"Tank not under SP", spCheck:"SP check", spPanel:"DOT-SP 11827 checks by tank", delRecent:"Recent record – press again to delete", refillW:"refill",
+  ckHint:"①–③ show passing/total shipment records. Hover a cell for details.",
+ }
+};
+const ST_KO = {
+ "Fe not reported":"Fe 미보고","Check Fe entry":"Fe 입력 확인","Fe >=50 - investigate":"Fe ≥ 기준 – 조사","Verify basis / QC":"기준·QC 확인 필요","Below Fe trigger":"Fe 기준 미만","Check Fe limit":"Fe 보고한계 확인","Limit too high - review":"보고한계 과다 – 검토","Below Fe trigger (<LOQ)":"Fe 기준 미만 (<LOQ)","Check Fe type":"Fe 결과 종류 확인",
+ "Unload time needed":"하역 시각 필요","Overdue - no analysis":"기한 초과 – 미분석","Analysis pending":"분석 대기","Late - over 15 days":"기한 초과 분석","Within 15-day limit":"기한 내 분석","Not required by cycle":"주기상 측정 제외",
+ "Refill time not recorded":"재충전 미기록","Refilled without analysis":"미분석 재충전","Check unload/refill order":"하역·재충전 순서 확인","Before recorded refill":"재충전 전 분석","Not before refill":"재충전 후 분석",
+ "Recent - retain":"최근 보관 대상","Retain history":"이력 보관","Need tank/load time":"탱크·충전시각 필요",
+ "Visual + spark records linked":"육안·스파크 기록 완료","Visual + spark records needed":"육안·스파크 기록 필요","External-source review recorded":"외부 오염원 검토 기록","Record corrective action":"시정조치 기록 필요","Investigate other sources":"다른 오염원 조사","No Fe-triggered action":"Fe 조치 불필요","Resolve Fe reporting / QC":"Fe 보고·QC 해결 필요",
+ "Duplicate record ID":"Record ID 중복","Complete IDs / product":"ID·제품 입력 필요","Check tank register":"탱크 등록부 확인","Duplicate tank / shipment":"탱크·출하 중복","Check result type / limit":"결과 종류·한계 확인","Add load / sample details":"충전·시료 정보 필요","Check event sequence":"시각 순서 확인","Review sample stage":"시료 단계 검토","Fe analysis incomplete":"Fe 분석 미완료","Complete Cr / Ni status":"Cr·Ni 상태 입력","Confirm product basis":"원제품 기준 확인","QC review needed":"QC 검토 필요","Add analyst / report evidence":"분석자·성적서 필요","Reviewer entry needed":"검토자 입력 필요","Reviewer action pending":"검토 조치 대기","Check review decision":"검토 결정 확인","Review recorded":"검토 완료","Cr / Ni due by cycle":"Cr·Ni 주기 측정 필요"
+};
+const OPT = {
+ rtype:["Measured","<LOQ","Not tested"],
+ stage:["After filling","During/after discharge","Other - explain"],
+ basis:["Yes","Pending"], qc:["Accepted","Pending","Rejected"],
+ other:["Pending","External source identified","Other sources excluded"],
+ decision:["Open","Reviewed - action pending","Reviewed - documented"],
+ yn:["Yes","No","Not confirmed"], party:["Not confirmed","Application pending","Approved - verify scope","Expired"]
+};
+const OPT_KO = {"Measured":"실측","<LOQ":"<LOQ (보고한계 미만)","Not tested":"미측정","After filling":"충전 후","During/after discharge":"하역 중·후","Other - explain":"기타 (비고에 설명)","Yes":"예","Pending":"대기","No":"아니오","Accepted":"승인","Rejected":"불합격","External source identified":"외부 오염원 확인","Other sources excluded":"다른 오염원 배제","Open":"미검토","Reviewed - action pending":"검토 후 조치 대기","Reviewed - documented":"검토·기록 완료","Not confirmed":"미확인","Application pending":"신청 중","Approved - verify scope":"승인 – 범위 확인","Expired":"만료"};
+
+/* ---------------- state ---------------- */
+const S = {
+  lang: lsGet("sp_lang") || "ko",
+  tab: "dash",
+  settings: {feTrigger:50, deadlineDays:15, recentN:5, tz:"America/New_York (ET)", company:"JNF AM LLC", address:"Marietta, Georgia, USA", preparer:"", defCycle:{mode:"shipment",n:1}},
+  tanks: [], records: [],
+  filter:{tank:"", q:"", mode:"all"},
+  mode: "loading", // shared | local
+};
+let db=null, assets=null, downloads=null;
+const t = k => (I[S.lang][k] ?? I.en[k] ?? k);
+const tf = (k,o) => t(k).replace(/\{(\w+)\}/g,(_,x)=>o[x]);
+const stL = s => S.lang==="ko" ? (ST_KO[s]||s) : s;
+const opL = s => S.lang==="ko" ? (OPT_KO[s]||s) : s;
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ---------------- dates ---------------- */
+function pd(s){ if(!s) return null; const d = new Date(s); return isNaN(d) ? null : d; }
+const pad = n => String(n).padStart(2,"0");
+function toInput(d){ return d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}` : ""; }
+function fdt(s){ const d = s instanceof Date ? s : pd(s); return d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` : ""; }
+function fd(s){ const d = s instanceof Date ? s : pd(s); return d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : ""; }
+const DAY = 86400000;
+
+/* ---------------- status engine (ported from the Excel log) ---------------- */
+const num = v => (v===""||v===null||v===undefined) ? null : (isFinite(+v) ? +v : NaN);
+const ELS=["fe","cr","ni"], EL={fe:"Fe",cr:"Cr",ni:"Ni"};
+function analyzedEl(r,el){ const ty=r[el+"Type"]; return !!pd(r.analysisAt) && (ty==="Measured"||ty==="<LOQ") && num(r[el+"Val"])!==null; }
+function analyzed(r){ return analyzedEl(r,"fe"); }
+function defCycles(){ const s=S.settings; if(s.defCycles) return JSON.parse(JSON.stringify(s.defCycles)); const b=s.defCycle||{mode:"shipment",n:1}; return {fe:{...b},cr:{...b},ni:{...b}}; }
+function cyclesOf(tank){ const base=(tank&&tank.cycle)||{mode:"shipment",n:1}; const c=(tank&&tank.cycles)||{}; return {fe:c.fe||base, cr:c.cr||c.fe||base, ni:c.ni||c.fe||base}; }
+const isSp = tank => !tank || tank.sp!==false;
+const spWarn = tank => isSp(tank) && cyclesOf(tank).fe.mode!=="shipment";
+function periodKey(d,mode){ if(mode==="monthly") return d.getFullYear()+"-"+pad(d.getMonth()+1); const m=new Date(d.getFullYear(),d.getMonth(),d.getDate()); m.setDate(m.getDate()-((m.getDay()+6)%7)); return "W"+fd(m); }
+function reqMapFor(asc, el, cy){
+  const map=new Map(), n=Math.max(1,+cy.n||1);
+  if(cy.mode==="weekly"||cy.mode==="monthly"){
+    const groups=new Map();
+    asc.forEach(r=>{ const L=pd(r.loadedAt); if(!L){ map.set(r,true); return; } const k=periodKey(L,cy.mode); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(r); });
+    groups.forEach(g=>{ const any=g.some(r=>analyzedEl(r,el)); g.forEach((r,i)=>map.set(r, analyzedEl(r,el) || (!any && i===0))); });
+    return map;
+  }
+  let counter=n-1, lastA=null;
+  asc.forEach(r=>{
+    let req=true; const L=pd(r.loadedAt), a=analyzedEl(r,el);
+    if(cy.mode!=="shipment" && L && !a){ if(cy.mode==="every_n"){ counter++; req = counter>=n; } else if(cy.mode==="days"){ req = !lastA || (L-lastA)>=n*DAY; } }
+    if(a){ counter=0; lastA=pd(r.analysisAt); }
+    map.set(r,req);
+  });
+  return map;
+}
+
+function feScreen(r){
+  const trig = +S.settings.feTrigger, v = num(r.feVal);
+  if(!r.feType || r.feType==="Not tested" || v===null) return "Fe not reported";
+  if(isNaN(v) || v<0) return "Check Fe entry";
+  const qcOk = r.basis==="Yes" && r.qc==="Accepted";
+  if(r.feType==="Measured"){ if(v>=trig) return "Fe >=50 - investigate"; return qcOk ? "Below Fe trigger" : "Verify basis / QC"; }
+  if(r.feType==="<LOQ"){ if(v<=0) return "Check Fe limit"; if(v>trig) return "Limit too high - review"; return qcOk ? "Below Fe trigger (<LOQ)" : "Verify basis / QC"; }
+  return "Check Fe type";
+}
+function deadline(r){ const u = pd(r.unloadedAt); return u ? new Date(u.getTime() + (+S.settings.deadlineDays)*DAY) : null; }
+function t15(r, req){
+  const u = pd(r.unloadedAt), a = pd(r.analysisAt), now = new Date();
+  if(!u) return "Unload time needed";
+  const dl = deadline(r);
+  if(!a){ if(req===false) return "Not required by cycle"; return now > dl ? "Overdue - no analysis" : "Analysis pending"; }
+  return a > dl ? "Late - over 15 days" : "Within 15-day limit";
+}
+function refillSt(r, req){
+  const p = pd(r.refillAt), a = pd(r.analysisAt), u = pd(r.unloadedAt);
+  if(!p) return "Refill time not recorded";
+  if(!a) return req===false ? "Not required by cycle" : "Refilled without analysis";
+  if(u && p < u) return "Check unload/refill order";
+  return a < p ? "Before recorded refill" : "Not before refill";
+}
+function followUp(r, fe){
+  if(fe==="Fe >=50 - investigate"){
+    const a = pd(r.analysisAt), v = pd(r.visualAt), s = pd(r.sparkAt), rv = pd(r.reviewedAt);
+    if(r.otherSrc==="Other sources excluded"){
+      const ok = a && v && s && v>=a && s>=a && r.invReport && r.reviewer && rv && rv>=v && rv>=s && r.decision==="Reviewed - documented";
+      return ok ? "Visual + spark records linked" : "Visual + spark records needed";
+    }
+    if(r.otherSrc==="External source identified"){
+      const ok = r.invReport && r.reviewer && a && rv && rv>=a && r.decision==="Reviewed - documented";
+      return ok ? "External-source review recorded" : "Record corrective action";
+    }
+    return "Investigate other sources";
+  }
+  if(fe==="Below Fe trigger"||fe==="Below Fe trigger (<LOQ)") return "No Fe-triggered action";
+  return "Resolve Fe reporting / QC";
+}
+function entrySt(r, req, reqCr, reqNi){
+  if(!r.recordId) return "Complete IDs / product";
+  if(S.records.filter(x=>x.recordId===r.recordId).length>1) return "Duplicate record ID";
+  if(!r.tankId||!r.bol||!r.product||!r.sampleId) return "Complete IDs / product";
+  if(S.tanks.filter(x=>x.tankId===r.tankId).length!==1) return "Check tank register";
+  if(S.records.filter(x=>x.tankId===r.tankId && x.bol===r.bol).length>1) return "Duplicate tank / shipment";
+  for(const [ty,vv] of [[r.feType,r.feVal],[r.crType,r.crVal],[r.niType,r.niVal]]){
+    const v=num(vv); if(v!==null && (isNaN(v)||v<0)) return "Check result type / limit";
+    if(ty==="Not tested" && v!==null) return "Check result type / limit";
+    if(ty==="<LOQ" && v!==null && v<=0) return "Check result type / limit";
+  }
+  const L=pd(r.loadedAt), Q=pd(r.sampleAt), M=pd(r.analysisAt), O=pd(r.unloadedAt), P=pd(r.refillAt), AD=pd(r.visualAt), AE=pd(r.sparkAt), AI=pd(r.reviewedAt);
+  if(!L||!Q||!r.stage) return "Add load / sample details";
+  if(Q<L || (M&&M<Q) || (O&&O<L) || (P&&P<=L) || (P&&O&&P<O) || (AI&&M&&AI<M) || (AI&&AD&&AI<AD) || (AI&&AE&&AI<AE)) return "Check event sequence";
+  if(r.stage!=="After filling" && r.stage!=="During/after discharge") return "Review sample stage";
+  if(req===false && !analyzed(r)) return "Not required by cycle";
+  if(!r.feType||r.feType==="Not tested"||num(r.feVal)===null||!M) return "Fe analysis incomplete";
+  for(const [el,rq] of [["cr",reqCr],["ni",reqNi]]){
+    const ty=r[el+"Type"], v=num(r[el+"Val"]);
+    if(rq!==false && !analyzedEl(r,el)) return ty==="Not tested" ? "Cr / Ni due by cycle" : "Complete Cr / Ni status";
+    if(ty && ty!=="Not tested" && v===null) return "Complete Cr / Ni status";
+  }
+  if(r.basis!=="Yes") return "Confirm product basis";
+  if(r.qc!=="Accepted") return "QC review needed";
+  const hasEv = (r.attachments||[]).some(a=>a.kind==="icp") || r.link;
+  if(!r.analyst||!r.runId||!hasEv) return "Add analyst / report evidence";
+  if(!r.reviewer||!AI||!r.decision||r.decision==="Open") return "Reviewer entry needed";
+  if(r.decision==="Reviewed - action pending") return "Reviewer action pending";
+  if(r.decision!=="Reviewed - documented") return "Check review decision";
+  return "Review recorded";
+}
+const TONE = {
+ "Below Fe trigger":"ok","Below Fe trigger (<LOQ)":"ok","Within 15-day limit":"ok","Before recorded refill":"ok","Recent - retain":"ok","Visual + spark records linked":"ok","External-source review recorded":"ok","No Fe-triggered action":"ok","Review recorded":"ok",
+ "Fe >=50 - investigate":"bad","Overdue - no analysis":"bad","Late - over 15 days":"bad","Refilled without analysis":"bad","Not before refill":"bad","Limit too high - review":"bad","Duplicate record ID":"bad","Duplicate tank / shipment":"bad","Check event sequence":"bad",
+ "Not required by cycle":"mute","Retain history":"mute","Refill time not recorded":"mute"
+};
+const tone = s => TONE[s] || "warn";
+const chip = s => s ? `<span class="chip ${tone(s)}">${esc(stL(s))}</span>` : "";
+
+/* cycle: decides whether a shipment record must be analyzed */
+function cycleOf(tank){ return (tank && tank.cycle) || {mode:"shipment",n:1}; }
+let calc = new Map();
+function recompute(){
+  calc = new Map();
+  const byTank = {};
+  S.records.forEach(r=>{ (byTank[r.tankId] = byTank[r.tankId] || []).push(r); });
+  const N = +S.settings.recentN || 5;
+  for(const [tid, list] of Object.entries(byTank)){
+    const tank = S.tanks.find(x=>x.tankId===tid);
+    const asc = list.slice().sort((a,b)=> (pd(a.loadedAt)||0)-(pd(b.loadedAt)||0) || String(a.recordId).localeCompare(String(b.recordId)));
+    const cys = cyclesOf(tank);
+    const rm = {fe:reqMapFor(asc,"fe",cys.fe), cr:reqMapFor(asc,"cr",cys.cr), ni:reqMapFor(asc,"ni",cys.ni)};
+    const desc = asc.filter(r=>pd(r.loadedAt)).slice().reverse();
+    asc.forEach(r=>{
+      const req = rm.fe.get(r), reqCr = rm.cr.get(r), reqNi = rm.ni.get(r);
+      const fe = feScreen(r);
+      const rank = pd(r.loadedAt) ? desc.indexOf(r)+1 : null;
+      calc.set(r.id, {
+        req, reqCr, reqNi, fe, deadline: deadline(r), t15: t15(r,req), refill: refillSt(r,req),
+        retain: (!r.tankId||!pd(r.loadedAt)) ? "Need tank/load time" : (rank<=N ? "Recent - retain" : "Retain history"),
+        follow: followUp(r, fe), entry: entrySt(r, req, reqCr, reqNi)
+      });
+    });
+  }
+}
+const C = r => calc.get(r.id) || {};
+function needsAction(r){
+  const c=C(r);
+  if(c.req===false && !analyzed(r)) return false;
+  return c.entry!=="Review recorded" || [c.fe,c.t15,c.refill,c.follow].some(x=>tone(x)==="bad");
+}
+const CK_TONE={ok:"ok",pend:"warn",warn:"warn",bad:"bad",na:""};
+const ckLabel=(i,lang=S.lang)=>(I[lang]["ck"+(i+1)]).replace("{d}",S.settings.deadlineDays).replace("{n}",S.settings.recentN);
+function trx(lang){ const tt=k=>I[lang][k]??I.en[k]??k; return {tt, tff:(k,o)=>tt(k).replace(/\{(\w+)\}/g,(_,x)=>o[x]), sl:x=>lang==="ko"?(ST_KO[x]||x):x}; }
+function check1(r, lang=S.lang){
+  const {tt,tff}=trx(lang), c=C(r);
+  const hasEv=(r.attachments||[]).some(a=>a.kind==="icp")||!!r.link;
+  const ok=analyzedEl(r,"fe") && !["Check Fe entry","Check Fe limit","Check Fe type"].includes(c.fe);
+  if(ok){ const v=(r.feType==="<LOQ"?"< ":"")+r.feVal; return hasEv ? {st:"ok",note:`${tt("c1ok")} (Fe ${v} ppb${r.runId?" · "+r.runId:""})`} : {st:"warn",note:`${tt("c1noEv")} (Fe ${v} ppb)`}; }
+  if(c.t15==="Analysis pending" && c.refill!=="Refilled without analysis") return {st:"pend",note:tff("c1pend",{d:fdt(c.deadline)})};
+  return {st:"bad",note:tt("c1bad")};
+}
+function tankC4(tankId, lang=S.lang){
+  const {tff}=trx(lang), N=+S.settings.recentN||5;
+  const recs=S.records.filter(r=>r.tankId===tankId), recent=recs.filter(r=>C(r).retain==="Recent - retain");
+  const bad=recent.filter(r=>["bad","warn"].includes(check1(r,lang).st)).length, pend=recent.filter(r=>check1(r,lang).st==="pend").length;
+  if(bad) return {st:"bad",note:tff("c4bad",{n:N,k:bad})};
+  if(pend) return {st:"pend",note:tff("c4pend",{n:N,k:pend})};
+  return {st:"ok",note: recs.length<N ? tff("c4few",{n:recs.length}) : tff("c4all",{n:N})};
+}
+function spChecks(r, lang=S.lang){
+  const {tt,tff,sl}=trx(lang), c=C(r), tank=S.tanks.find(x=>x.tankId===r.tankId);
+  if(tank && !isSp(tank)) return {sp:false, list:[0,1,2,3].map(()=>({st:"na",note:tt("na")}))};
+  const c1=check1(r,lang);
+  const miss=[], L=pd(r.loadedAt), Q=pd(r.sampleAt), A=pd(r.analysisAt), P=pd(r.refillAt);
+  if(!tank) miss.push(tt("tankId")+" ↔ "+tt("tabTanks"));
+  if(!r.bol) miss.push(tt("bol")); if(!r.sampleId) miss.push(tt("sampleId")); if(!L) miss.push(tt("loadedAt")); if(!Q) miss.push(tt("sampleAt"));
+  if(r.stage!=="After filling"&&r.stage!=="During/after discharge") miss.push(tt("stage"));
+  if(L&&Q&&Q<L) miss.push(tt("sampleAt")+" < "+tt("loadedAt"));
+  if(Q&&A&&A<Q) miss.push(tt("analysisAt")+" < "+tt("sampleAt"));
+  if(r.bol && S.records.filter(x=>x.tankId===r.tankId&&x.bol===r.bol).length>1) miss.push(sl("Duplicate tank / shipment"));
+  const c2 = miss.length ? {st:"bad",note:tff("c2bad",{x:miss.join(", ")})} : {st:"ok",note:`${tt("c2ok")} (${r.tankId} / ${r.bol} / ${r.sampleId}, ${fdt(L)})`};
+  let c3;
+  if(c.t15==="Within 15-day limit" && (c.refill==="Before recorded refill"||c.refill==="Refill time not recorded")) c3={st:"ok",note:`${tt("c3ok")} (${fdt(A)} ≤ ${fdt(c.deadline)}${P?`; ${tt("refillW")} ${fdt(P)}`:""})`};
+  else if(c.t15==="Analysis pending" && c.refill!=="Refilled without analysis") c3={st:"pend",note:tff("c3pend",{d:fdt(c.deadline)})};
+  else c3={st:"bad",note:[c.t15,c.refill].filter(x=>tone(x)!=="ok" && x!=="Refill time not recorded").map(sl).join(" · ")||sl(c.t15)};
+  let c4;
+  if(c.retain==="Recent - retain"){ const k=tankC4(r.tankId,lang); c4 = k.st==="ok" ? {st:"ok",note:tff("c4ok",{n:S.settings.recentN})} : k; }
+  else if(c.retain==="Retain history") c4={st:"ok",note:tff("c4hist",{n:S.settings.recentN})};
+  else c4={st:"bad",note:sl(c.retain)};
+  return {sp:true, list:[c1,c2,c3,c4]};
+}
+function ckBadges(r){ const k=spChecks(r); return `<span class="ck">${k.list.map((x,i)=>`<i class="${CK_TONE[x.st]}" title="${esc(ckLabel(i)+" — "+x.note)}">${i+1}</i>`).join("")}</span>`; }
+function certOk(r){
+  const c=C(r);
+  const fe = c.fe==="Below Fe trigger"||c.fe==="Below Fe trigger (<LOQ)";
+  if(!spChecks(r).list.every(x=>x.st==="ok"||x.st==="na")) return false;
+  return fe && c.t15==="Within 15-day limit" && (c.refill==="Before recorded refill"||c.refill==="Refill time not recorded") && r.decision==="Reviewed - documented" && c.entry==="Review recorded";
+}
+function openItems(r){
+  const c=C(r), out=[];
+  if(!(c.fe==="Below Fe trigger"||c.fe==="Below Fe trigger (<LOQ)")) out.push(c.fe);
+  if(c.t15!=="Within 15-day limit") out.push(c.t15);
+  if(!(c.refill==="Before recorded refill"||c.refill==="Refill time not recorded")) out.push(c.refill);
+  if(c.entry!=="Review recorded") out.push(c.entry);
+  return [...new Set(out)];
+}
+
+/* tank schedule (per element) */
+function scheduleEl(tank, el){
+  const cy = cyclesOf(tank)[el], recs = S.records.filter(r=>r.tankId===tank.tankId);
+  const asc = recs.filter(r=>pd(r.loadedAt)).sort((a,b)=>pd(a.loadedAt)-pd(b.loadedAt));
+  const an = recs.filter(r=>analyzedEl(r,el)).sort((a,b)=>pd(b.analysisAt)-pd(a.analysisAt));
+  const last = an[0] ? pd(an[0].analysisAt) : null;
+  const key = el==="fe"?"req":el==="cr"?"reqCr":"reqNi";
+  const pending = recs.filter(r=>!analyzedEl(r,el) && C(r)[key]!==false && pd(r.loadedAt));
+  const now = new Date(); const n=Math.max(1,+cy.n||1);
+  let text, toneV="ok", due=false;
+  if(pending.length){
+    const dls = pending.map(r=>{ const d=C(r).deadline, p=pd(r.refillAt); return [d,p].filter(Boolean).sort((a,b)=>a-b)[0]; }).filter(Boolean).sort((a,b)=>a-b);
+    const first = dls[0]; due = true;
+    if(first && first < now){ text = `${t("overdue")} · ${tf("pending",{n:pending.length})}`; toneV="bad"; }
+    else { text = `${tf("pending",{n:pending.length})}${first ? " · "+tf("dueOn",{d:fd(first)}) : ""}`; toneV="warn"; }
+  } else if(cy.mode==="shipment"){ text = t("dueNext"); }
+  else if(cy.mode==="weekly"||cy.mode==="monthly"){
+    const k = periodKey(now, cy.mode), w = cy.mode==="weekly";
+    const done = asc.some(r=>analyzedEl(r,el) && periodKey(pd(r.loadedAt),cy.mode)===k);
+    text = done ? t(w?"thisWeekDone":"thisMonthDone") : t(w?"firstShipWeek":"firstShipMonth");
+  } else if(cy.mode==="every_n"){
+    let k=0, seen=false; for(let i=asc.length-1;i>=0;i--){ if(analyzedEl(asc[i],el)){seen=true;break;} k++; }
+    if(!seen) k += n-1;
+    const rem = Math.max(0,n-k);
+    text = rem<=1 ? t("dueNext") : tf("dueInShip",{n:rem-1});
+  } else {
+    const next = last ? new Date(last.getTime()+n*DAY) : null;
+    if(!next){ text=t("dueNext"); }
+    else if(next < now){ text = `${t("dueNext")} · ${fd(next)}~`; toneV="warn"; }
+    else text = tf("dueOn",{d:fd(next)});
+  }
+  return {text, tone:toneV, due, last};
+}
+function schedule(tank){
+  const el = {fe:scheduleEl(tank,"fe"), cr:scheduleEl(tank,"cr"), ni:scheduleEl(tank,"ni")};
+  const recs = S.records.filter(r=>r.tankId===tank.tankId);
+  return {...el.fe, el, due: el.fe.due||el.cr.due||el.ni.due, count:recs.length, fe:recs.filter(r=>C(r).fe==="Fe >=50 - investigate").length, recent:recs.filter(r=>C(r).retain==="Recent - retain").length};
+}
+const cyclesCell = tank => { const cs=cyclesOf(tank); return ELS.map(el=>`<div><b class="mono">${EL[el]}</b> ${esc(cycleLabel(cs[el]))}</div>`).join(""); };
+const dueCell = s => ELS.map(el=>`<div style="margin:2px 0"><b class="mono">${EL[el]}</b> <span class="chip ${s.el[el].tone}">${esc(s.el[el].text)}</span></div>`).join("");
+function cycleLabel(cy){ cy=cy||{mode:"shipment"}; if(cy.mode==="weekly") return t("cycWeek"); if(cy.mode==="monthly") return t("cycMonth"); if(cy.mode==="every_n") return `${t("cycN").replace("N",cy.n)}`; if(cy.mode==="days") return t("cycDays").replace("N",cy.n); return t("cycShip"); }
+
+/* ---------------- storage: Firebase Realtime Database (jnfam-task-plan / sp11827) ---------------- */
+const firebaseConfig = {
+  apiKey:            "AIzaSyBkY5IGIPC0CsJB55hui7wqCffcCiS33NI",
+  authDomain:        "jnfam-task-plan.firebaseapp.com",
+  databaseURL:       "https://jnfam-task-plan-default-rtdb.firebaseio.com",
+  projectId:         "jnfam-task-plan",
+  storageBucket:     "jnfam-task-plan.firebasestorage.app",
+  messagingSenderId: "76859256151",
+  appId:             "1:76859256151:web:c056fd641305780908e212",
+};
+const ROOT = "sp11827";
+const MAX_FILE = 7*1024*1024;   // RTDB node limit 10 MB → base64 overhead
+let FB = null;
+const clean = o => JSON.parse(JSON.stringify(o));
+async function putDoc(coll, id, data){
+  if(S.mode==="shared"){ await FB.set(FB.ref(db, `${ROOT}/${coll}/${id}`), clean(data)); }
+  else { localApply(coll, id, data); }
+}
+async function delDoc(coll, id){
+  if(S.mode==="shared"){ await FB.remove(FB.ref(db, `${ROOT}/${coll}/${id}`)); }
+  else { localApply(coll, id, null); }
+}
+function localApply(coll, id, data){
+  if(coll==="config"){ if(data) S.settings = {...S.settings, ...data}; }
+  else { const arr = coll==="tanks" ? S.tanks : S.records; const i = arr.findIndex(x=>x.id===id); if(data){ data.id=id; if(i>=0) arr[i]=data; else arr.push(data); } else if(i>=0) arr.splice(i,1); }
+  lsSet("sp_local", JSON.stringify({settings:S.settings,tanks:S.tanks,records:S.records}));
+  recompute(); render();
+}
+function loadLocal(){
+  try{ const j = JSON.parse(lsGet("sp_local")||"null"); if(j){ S.settings={...S.settings,...j.settings}; S.tanks=j.tanks||[]; S.records=j.records||[]; } }catch(e){}
+  if(!S.tanks.length){
+    [["JNFU2400016","HCl"],["JNFU2400021","HF"],["JNFU2400037","HF"],["JNFU2400042","HNO3"]].forEach(([id,p])=>S.tanks.push({id:"t_"+id,tankId:id,product:p,lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",authRef:"",validUntil:"",procRef:"",active:true,sp:true,cycle:{mode:"shipment",n:1}}));
+  }
+}
+/* evidence files live at sp11827/files/<id> as base64; records keep only metadata */
+const fileCache = new Map();
+function b64ToBlob(b64,type){ const bin=atob(b64); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type}); }
+function blobToB64(blob){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]); fr.onerror=rej; fr.readAsDataURL(blob); }); }
+async function getFileBlob(id){
+  if(fileCache.has(id)) return fileCache.get(id);
+  const snap = await FB.get(FB.ref(db, `${ROOT}/files/${id}`));
+  if(!snap.exists()) throw new Error("file not found");
+  const v = snap.val(); const blob = b64ToBlob(v.data, v.type||"application/octet-stream");
+  fileCache.set(id, blob); return blob;
+}
+async function openFile(id){
+  const w = window.open("", "_blank");
+  try{ const blob = await getFileBlob(id); const url = URL.createObjectURL(blob); if(w) w.location.href = url; else window.location.href = url; }
+  catch(e){ if(w) w.close(); toast(e.message||e); }
+}
+function makeAssets(){
+  return {
+    async upload(file, opt){
+      if(file.size > MAX_FILE){ const e=new Error(t("tooBig")+file.name); e.code="too_large"; throw e; }
+      const type = (opt&&opt.type) || file.type || "application/octet-stream";
+      const id = uid("f_");
+      await FB.set(FB.ref(db, `${ROOT}/files/${id}`), {name:file.name, type, size:file.size, at:new Date().toISOString(), data: await blobToB64(file)});
+      fileCache.set(id, file);
+      return {id, url:"", sizeBytes:file.size, contentType:type};
+    },
+    async delete(id){ fileCache.delete(id); await FB.remove(FB.ref(db, `${ROOT}/files/${id}`)); return {deleted:true}; }
+  };
+}
+const localDownloads = { async save({filename, data}){ const blob = data instanceof Blob ? data : new Blob([data]); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000); return {status:"saved"}; } };
+async function init(){
+  render();
+  downloads = localDownloads;
+  try{
+    const [appM, dbM] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"),
+    ]);
+    FB = dbM;
+    const app = appM.initializeApp(firebaseConfig, "sp11827");
+    db = dbM.getDatabase(app);
+  }catch(e){ db=null; }
+  if(!db){ S.mode="local"; loadLocal(); recompute(); render(); return; }
+  const toList = v => Object.entries(v||{}).map(([id,x])=>({...x, id}));
+  let first=true;
+  const fail = e => { if(first){ first=false; S.mode="local"; loadLocal(); recompute(); render(); } toast("Firebase: "+(e.message||e)); };
+  const seen = {t:false,r:false,c:false};
+  const ready = k => { seen[k]=true; if(seen.t&&seen.r&&seen.c){ if(first){ first=false; S.mode="shared"; assets=makeAssets(); } } recompute(); render(); };
+  FB.onValue(FB.ref(db, `${ROOT}/tanks`), s=>{ S.tanks = toList(s.val()); ready("t"); }, fail);
+  FB.onValue(FB.ref(db, `${ROOT}/records`), s=>{ S.records = toList(s.val()).map(r=>({...r, attachments: Array.isArray(r.attachments)?r.attachments:Object.values(r.attachments||{})})); ready("r"); }, fail);
+  FB.onValue(FB.ref(db, `${ROOT}/config/settings`), s=>{ if(s.exists()) S.settings = {...S.settings, ...s.val()}; ready("c"); }, fail);
+  setTimeout(()=>{ if(first) toast(S.lang==="ko"?"Firebase 응답이 늦습니다. 네트워크와 규칙을 확인하세요.":"Firebase is slow to respond. Check the network and rules."); }, 10000);
+}
+
+/* ---------------- render ---------------- */
+const TABS = [["dash","tabDash"],["log","tabLog"],["tanks","tabTanks"],["set","tabSet"],["guide","tabGuide"]];
+function render(){
+  document.documentElement.lang = S.lang;
+  document.getElementById("langKo").setAttribute("aria-pressed", S.lang==="ko");
+  document.getElementById("langEn").setAttribute("aria-pressed", S.lang==="en");
+  const sc = document.getElementById("storeChip");
+  sc.className = "chip " + (S.mode==="shared"?"ok":S.mode==="local"?"warn":"");
+  sc.textContent = t(S.mode==="shared"?"storeShared":S.mode==="local"?"storeLocal":"storeLoading");
+  document.getElementById("tabs").innerHTML = TABS.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${t(l)}</button>`).join("");
+  const m = document.getElementById("main");
+  if(S.mode==="loading"){ m.innerHTML = `<div class="panel empty">${t("storeLoading")}…</div>`; return; }
+  m.innerHTML = ({dash:vDash, log:vLog, tanks:vTanks, set:vSet, guide:vGuide}[S.tab])();
+  if(S.tab==="log"){ const q=document.getElementById("fq"); if(q && document.activeElement?.id!=="fq" && S._fq){ q.focus(); q.setSelectionRange(q.value.length,q.value.length); S._fq=false; } }
+}
+
+function vDash(){
+  const recs = S.records;
+  const fe = recs.filter(r=>C(r).fe==="Fe >=50 - investigate").length;
+  const timing = recs.filter(r=>["Late - over 15 days","Overdue - no analysis"].includes(C(r).t15)).length + recs.filter(r=>["Not before refill","Refilled without analysis"].includes(C(r).refill)).length;
+  const open = recs.filter(r=>C(r).entry!=="Review recorded" && C(r).entry!=="Not required by cycle").length;
+  const tanks = S.tanks.filter(x=>x.active!==false);
+  const sch = tanks.map(x=>({tank:x, s:schedule(x)}));
+  const due = sch.filter(x=>x.s.due).length;
+  const attn = recs.filter(needsAction).sort((a,b)=>(pd(b.loadedAt)||0)-(pd(a.loadedAt)||0)).slice(0,12);
+  return `
+  ${S.mode==="local"?`<div class="banner warn">${S.lang==="ko"?"Firebase에 연결되지 않아 기록이 이 브라우저에만 저장됩니다. Firebase 규칙에 sp11827 경로가 열려 있는지 확인하세요.":"Firebase isn't connected, so records stay in this browser only. Check that the Firebase rules allow the sp11827 path."}</div>`:""}
+  <div class="kpis">
+    <div class="kpi"><div class="v">${recs.length}</div><div class="l">${t("kShip")}</div></div>
+    <div class="kpi ${fe?"bad":"ok"}"><div class="v">${fe}</div><div class="l">${t("kFe")} · ${S.settings.feTrigger} ppb</div></div>
+    <div class="kpi ${timing?"bad":"ok"}"><div class="v">${timing}</div><div class="l">${t("kTiming")} · ${S.settings.deadlineDays}d / refill</div></div>
+    <div class="kpi ${open?"warn":"ok"}"><div class="v">${open}</div><div class="l">${t("kOpen")}</div></div>
+    <div class="kpi ${due?"warn":"ok"}"><div class="v">${due}</div><div class="l">${t("kDue")}</div></div>
+  </div>
+  <section class="panel">
+    <div class="panel-h"><h2>${t("spPanel")}</h2><span class="muted" style="font-size:12.5px">${t("ckHint")}</span></div>
+    ${spPanel(tanks)}
+  </section>
+  <section class="panel">
+    <div class="panel-h"><h2>${t("sched")}</h2><button class="btn primary" data-act="newRec">＋ ${t("newRec")}</button></div>
+    ${sch.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th>Tank ID</th><th>${S.lang==="ko"?"제품":"Product"}</th><th>${t("cycle")}</th><th>${t("lastMeas")} (Fe)</th><th>${t("nextDue")}</th><th class="num">${t("shipCnt")}</th><th class="num">${t("feCnt")}</th><th></th></tr></thead><tbody>
+      ${sch.map(({tank,s})=>`<tr><td class="mono">${esc(tank.tankId)}</td><td>${esc(tank.product)}</td><td>${cyclesCell(tank)}${spWarn(tank)?`<span class="chip warn" title="${esc(t("cycWarn"))}">SP §7(c)</span>`:""}</td><td class="mono">${s.last?fd(s.last):"–"}</td><td>${dueCell(s)}</td><td class="num">${s.count}</td><td class="num">${s.fe}</td><td><button class="btn sm" data-act="tankReport" data-id="${tank.id}">${t("report")}</button></td></tr>`).join("")}
+    </tbody></table></div>`:`<div class="empty">${t("emptyTanks")}</div>`}
+  </section>
+  <section class="panel">
+    <div class="panel-h"><h2>${t("attention")}</h2><button class="btn sm" data-act="goLogAttn">${t("tabLog")} →</button></div>
+    ${attn.length? recTable(attn) : `<div class="empty">${recs.length?t("noAttention"):t("emptyLog")}</div>`}
+  </section>`;
+}
+function spPanel(tanks){
+  const sp=tanks.filter(isSp); if(!sp.length) return `<div class="empty">–</div>`;
+  const cell=(recs,i)=>{ const ks=recs.map(r=>spChecks(r).list[i]); const ok=ks.filter(k=>k.st==="ok").length, bad=ks.filter(k=>k.st==="bad"||k.st==="warn").length, pend=ks.filter(k=>k.st==="pend").length;
+    const tn=bad?"bad":pend?"warn":"ok"; const why=recs.filter((r,j)=>ks[j].st!=="ok").map((r,j)=>r.recordId).join(", ");
+    return `<span class="chip ${recs.length?tn:""}" title="${esc(why)}">${ok}/${recs.length}${pend?` · ${S.lang==="ko"?"대기":"pending"} ${pend}`:""}${bad?` · ${S.lang==="ko"?"미흡":"fail"} ${bad}`:""}</span>`; };
+  return `<div class="tbl-wrap"><table class="t"><thead><tr><th>Tank ID</th>${[0,1,2,3].map(i=>`<th>${esc(ckLabel(i))}</th>`).join("")}</tr></thead><tbody>
+   ${sp.map(x=>{ const recs=S.records.filter(r=>r.tankId===x.tankId); const k4=tankC4(x.tankId); return `<tr><td class="mono">${esc(x.tankId)}</td>${[0,1,2].map(i=>`<td>${cell(recs,i)}</td>`).join("")}<td><span class="chip ${recs.length?CK_TONE[k4.st]:""}">${esc(k4.note)}</span></td></tr>`; }).join("")}
+  </tbody></table></div>`;
+}
+function recTable(list){
+  return `<div class="tbl-wrap"><table class="t"><thead><tr>
+    <th>Record ID</th><th>Tank</th><th>BOL</th><th>${S.lang==="ko"?"하역":"Unloaded"}</th><th class="num">Fe</th><th class="num">Cr</th><th class="num">Ni</th>
+    <th>Fe</th><th>${S.settings.deadlineDays}${S.lang==="ko"?"일 기한":"-day"}</th><th>${S.lang==="ko"?"재충전 전":"Before refill"}</th><th>${S.lang==="ko"?"기록 상태":"Entry"}</th><th>${t("spCheck")} ①–④</th><th class="num">${t("evCount")}</th><th></th></tr></thead><tbody>
+    ${list.map(r=>{const c=C(r);return `<tr class="click" data-act="editRec" data-id="${r.id}">
+      <td class="mono">${esc(r.recordId)}</td><td class="mono">${esc(r.tankId)}</td><td>${esc(r.bol)}</td><td class="mono">${fd(r.unloadedAt)||"–"}</td>
+      <td class="num">${fmtRes(r.feType,r.feVal)}</td><td class="num">${fmtRes(r.crType,r.crVal)}</td><td class="num">${fmtRes(r.niType,r.niVal)}</td>
+      <td>${chip(c.fe)}</td><td>${chip(c.t15)}</td><td>${chip(c.refill)}</td><td>${chip(c.entry)}</td><td>${ckBadges(r)}</td><td class="num">${(r.attachments||[]).length||"–"}</td>
+      <td><button class="btn sm" data-act="recReport" data-id="${r.id}">${t("report")}</button></td></tr>`}).join("")}
+  </tbody></table></div>`;
+}
+function fmtRes(ty,v){ if(!ty) return "–"; if(ty==="Not tested") return "n/t"; if(num(v)===null) return "?"; return (ty==="<LOQ"?"&lt;":"")+esc(v); }
+
+function vLog(){
+  const f=S.filter; const q=f.q.trim().toLowerCase();
+  let list = S.records.slice();
+  if(f.tank) list=list.filter(r=>r.tankId===f.tank);
+  if(q) list=list.filter(r=>[r.recordId,r.bol,r.sampleId,r.lot,r.customer].join(" ").toLowerCase().includes(q));
+  if(f.mode==="attn") list=list.filter(needsAction);
+  if(f.mode==="fe") list=list.filter(r=>C(r).fe==="Fe >=50 - investigate");
+  if(f.mode==="recent") list=list.filter(r=>C(r).retain==="Recent - retain");
+  list.sort((a,b)=>(pd(b.loadedAt)||0)-(pd(a.loadedAt)||0));
+  return `<section class="panel">
+    <div class="panel-h"><h2>${t("tabLog")} <span class="muted mono">(${list.length}/${S.records.length})</span></h2>
+      <div class="toolbar"><button class="btn" data-act="import">${t("importX")}</button><button class="btn" data-act="export">${t("exportX")}</button><button class="btn primary" data-act="newRec">＋ ${t("newRec")}</button></div></div>
+    <div class="toolbar" style="margin-bottom:12px">
+      <select id="ftank" aria-label="Tank"><option value="">${t("allTanks")}</option>${S.tanks.map(x=>`<option ${f.tank===x.tankId?"selected":""}>${esc(x.tankId)}</option>`).join("")}</select>
+      <div class="seg" role="group">${[["all","fAll"],["attn","fAttn"],["fe","fFe"],["recent","fRecent"]].map(([k,l])=>`<button type="button" data-act="fmode" data-v="${k}" aria-pressed="${f.mode===k}">${t(l)}</button>`).join("")}</div>
+      <input id="fq" type="search" placeholder="${esc(t("search"))}" value="${esc(f.q)}" style="flex:1;min-width:180px">
+    </div>
+    ${list.length?recTable(list):`<div class="empty">${S.records.length?"–":t("emptyLog")}</div>`}
+    <input type="file" id="importFile" accept=".xlsx,.xls" hidden>
+  </section>`;
+}
+
+function vTanks(){
+  return `<div class="panel-h"><h2>${t("tabTanks")}</h2><button class="btn primary" data-act="newTank">＋ ${t("newTank")}</button></div>
+  ${S.tanks.length?`<div class="tanks">${S.tanks.map(x=>{const s=schedule(x);return `<article class="tank">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="id">${esc(x.tankId)}</span><span class="chip ${x.active===false?"":"ok"}">${esc(x.product||"–")}</span></div>
+    <dl class="kv">
+      <dt>SP 11827</dt><dd>${isSp(x)?opL("Yes"):opL("No")}</dd>
+      <dt>${t("cycle")}</dt><dd>${cyclesCell(x)}</dd>
+      <dt>${t("nextDue")}</dt><dd>${dueCell(s)}</dd>
+      <dt>${t("lastMeas")} (Fe)</dt><dd class="mono">${s.last?fdt(s.last):"–"}</dd>
+      <dt>${t("lining")}</dt><dd>${esc(x.lining||"–")}</dd>
+      <dt>${t("dedicated")}</dt><dd>${esc(opL(x.dedicated||"Not confirmed"))}</dd>
+      <dt>${t("identified")}</dt><dd>${esc(opL(x.identified||"Not confirmed"))}</dd>
+      <dt>${t("party")}</dt><dd>${esc(opL(x.party||"Not confirmed"))}</dd>
+      <dt>${t("shipCnt")} / ${t("feCnt")} / ${t("recent")}</dt><dd class="mono">${s.count} / ${s.fe} / ${s.recent}</dd>
+    </dl>
+    ${spWarn(x)?`<div class="banner warn" style="font-size:12px">${esc(t("cycWarn"))}</div>`:""}
+    <div class="toolbar"><button class="btn sm" data-act="editTank" data-id="${x.id}">${t("tankCfg")}</button><button class="btn sm" data-act="tankReport" data-id="${x.id}">${t("tankReport")}</button><button class="btn sm" data-act="histTank" data-v="${esc(x.tankId)}">${t("tankHist")}</button></div>
+  </article>`}).join("")}</div>`:`<div class="panel empty">${t("emptyTanks")}</div>`}`;
+}
+
+function vSet(){
+  const s=S.settings, dc=defCycles();
+  return `<section class="panel"><div class="panel-h"><h2>${t("tabSet")}</h2></div>
+  <form id="setForm" class="grid" style="gap:16px">
+    <div class="banner info">${esc(t("setNote"))}</div>
+    <div class="grid g3">
+      <label class="f"><span>${t("setTrig")}</span><input id="s_feTrigger" type="number" step="any" min="0" value="${esc(s.feTrigger)}"></label>
+      <label class="f"><span>${t("setDays")}</span><input id="s_deadlineDays" type="number" min="1" value="${esc(s.deadlineDays)}"></label>
+      <label class="f"><span>${t("setRecent")}</span><input id="s_recentN" type="number" min="1" value="${esc(s.recentN)}"></label>
+      <label class="f"><span>${t("setTz")}</span><input id="s_tz" value="${esc(s.tz)}"></label>
+    </div>
+    <div class="grid g3">
+      <label class="f"><span>${t("setCo")}</span><input id="s_company" value="${esc(s.company)}"></label>
+      <label class="f"><span>${t("setAddr")}</span><input id="s_address" value="${esc(s.address)}"></label>
+      <label class="f"><span>${t("setPrep")}</span><input id="s_preparer" value="${esc(s.preparer)}"></label>
+    </div>
+    <h3>${t("defCycles")}</h3>
+    <div class="grid g3">${cycleInputs("s",dc)}</div>
+    <div class="toolbar"><button class="btn primary" type="submit">${t("save")}</button></div>
+  </form></section>`;
+}
+const needN = m => m==="every_n"||m==="days";
+const cycleInputs = (pfx,cs) => ELS.map(el=>F("",tf("elCycle",{el:EL[el]}),`<div style="display:flex;gap:6px"><select id="${pfx}_cyc_${el}" data-cyc="${pfx}_n_${el}">${cycOpts(cs[el].mode)}</select><input id="${pfx}_n_${el}" type="number" min="1" value="${esc(cs[el].n||1)}" style="width:76px" aria-label="N" title="N" ${needN(cs[el].mode)?"":"hidden"}></div>`)).join("");
+const readCycles = pfx => { const o={}; ELS.forEach(el=>{ o[el]={mode:document.getElementById(`${pfx}_cyc_${el}`).value, n:Math.max(1,parseInt(document.getElementById(`${pfx}_n_${el}`).value)||1)}; }); return o; };
+const cycOpts = m => [["shipment","cycShip"],["weekly","cycWeek"],["monthly","cycMonth"],["every_n","cycN"],["days","cycDays"]].map(([k,l])=>`<option value="${k}" ${m===k?"selected":""}>${t(l)}</option>`).join("");
+
+function vGuide(){
+  const ko = S.lang==="ko";
+  return `<section class="panel guide">
+  <div class="panel-h"><h2>${ko?"DOT-SP 11827 (32차 개정, 2020-04-23) 요구사항과 앱 반영":"DOT-SP 11827 (32nd rev., 2020-04-23): requirements and how this app covers them"}</h2></div>
+  <div class="tbl-wrap"><table class="t"><thead><tr><th>${ko?"조항":"Section"}</th><th>${ko?"요구사항":"Requirement"}</th><th>${ko?"앱 반영":"In this app"}</th></tr></thead><tbody>
+   <tr><td class="mono">§7(b)(1)(i), (2)(i)</td><td style="white-space:normal">${ko?"마지막 적재분의 철(Fe) 오염을 ICP-MS 또는 GFAA로 분석":"Analyze iron (Fe) contamination of the last loading by ICP-MS or GFAA"}</td><td style="white-space:normal">${ko?"출하 기록마다 Fe/Cr/Ni 결과, 분석자, Run ID, 성적서 첨부":"Fe/Cr/Ni results, analyst, run ID and attached report per shipment"}</td></tr>
+   <tr><td class="mono">§7(b)(1)(ii), (2)(ii)</td><td style="white-space:normal">${ko?"충전 후 Fe ≥ 50 ppb이면 라이닝 결함 의심 → 밸브·배관 등 다른 오염원 배제 후 육안 + 스파크 검사":"Fe ≥ 50 ppb after filling indicates a lining defect; if valves, piping and other sources are excluded, inspect visually and by spark test"}</td><td style="white-space:normal">${ko?"Fe 판정, 다른 오염원 조사, 육안·스파크 검사 일시와 증빙, 후속 상태":"Fe screening, other-source status, visual/spark timestamps and evidence, follow-up status"}</td></tr>
+   <tr><td class="mono">§7(c)</td><td style="white-space:normal">${ko?"출하마다 오염 기록 유지. 재충전 전, 그리고 하역 후 15일 이내 분석 완료. 최근 5회 이상 출하 기록 보관":"Keep contamination records per shipment; complete analysis before refill and within 15 days after unloading; retain at least the five most recent shipments"}</td><td style="white-space:normal">${ko?"15일 기한·재충전 전 판정, 탱크별 최근 5건 표시, 기록 삭제 없이 이력 보관":"15-day and before-refill statuses, recent-5 flag per tank, full history kept"}</td></tr>
+   <tr><td class="mono">§7(c)</td><td style="white-space:normal">${ko?"검사기관에 \"Meets criteria for exemption from interior visual inspection per DOT-SP 11827\" 확인":"Certify to the inspection facility: \"Meets criteria for exemption from interior visual inspection per DOT-SP 11827\""}</td><td style="white-space:normal">${ko?"조건 충족 시에만 보고서에 확인 문구 표시, 미충족 시 미결 항목 나열":"Report prints the statement only when all conditions are met; otherwise lists open items"}</td></tr>
+   <tr><td class="mono">§7(a)</td><td style="white-space:normal">${ko?"Fluoroclad PTFE 라이닝, 전용 사용, 탱크별 OHMSAPD 서면 식별":"Fluoroclad PTFE lining, dedicated service, each tank identified in writing to OHMSAPD"}</td><td style="white-space:normal">${ko?"탱크 등록부의 라이닝·전용 사용·식별·승인 항목":"Tank register lining, dedicated service, identification and approval fields"}</td></tr>
+   <tr><td class="mono">§8(b), 8(c), 10</td><td style="white-space:normal">${ko?"양면에 2인치 이상 \"DOT-SP 11827\" 표시, 시설·운송수단에 허가서 사본 비치":"Mark \"DOT-SP 11827\" on both sides (≥ 2 in.), keep a current copy at each facility and aboard each vehicle/vessel"}</td><td style="white-space:normal">${ko?"앱 범위 밖 (현장 점검 항목)":"Outside the app (site checks)"}</td></tr>
+  </tbody></table></div>
+  <h3 style="margin-top:16px">${ko?"측정 주기":"Measurement cycle"}</h3>
+  <p>${ko?"탱크별로 Fe·Cr·Ni 각각의 주기를 매 출하 / 주 1회 / 월 1회 / N회 출하마다 / N일마다 중에서 정합니다. 주 1회·월 1회는 그 주(월~일)·그 달의 첫 출하가 측정 대상이며, 같은 기간에 이미 측정한 출하가 있으면 나머지는 '주기상 측정 제외'로 표시됩니다. 측정 대상 출하는 하역 후 15일 이내, 재충전 전에 분석해야 합니다.":"Each tank sets its own Fe, Cr and Ni cycle: every shipment, weekly, monthly, every N shipments or every N days. Weekly/monthly make the first shipment of that week (Mon–Sun) or month the one to measure; once a shipment in the period is measured, the rest show 'Not required by cycle'. Shipments that must be measured follow the 15-day and before-refill rules."}</p>
+  <p>${ko?"SP 11827 §7(c)는 출하마다 Fe 분석 기록을 요구합니다. 'SP 11827 적용' 탱크의 Fe 주기를 매 출하가 아닌 값으로 두면 경고가 표시됩니다. Cr·Ni는 SP 요구 항목이 아니므로 주기를 자유롭게 정할 수 있습니다.":"SP 11827 §7(c) requires an Fe record for each shipment. Tanks marked as operating under SP 11827 show a warning when Fe is not on 'every shipment'. Cr and Ni are not SP requirements, so their cycle is up to you."}</p>
+  <h3>${ko?"입력 원칙 (Excel 가이드와 동일)":"Recording rules (same as the Excel guide)"}</h3>
+  <ul>
+   <li>${ko?"희석·밀도 보정을 마친 원제품 기준 ppb를 입력합니다. ug/L와 ug/kg를 같다고 가정하지 않습니다.":"Enter final product-basis ppb after dilution/density correction. Do not assume ug/L equals ug/kg."}</li>
+   <li>${ko?"<LOQ는 양수 보고한계를 입력하고, 미측정은 값을 비웁니다. ND를 0으로 바꾸지 않습니다.":"For <LOQ enter the positive reporting limit; leave Not tested blank. Never replace ND with zero."}</li>
+   <li>${ko?"재충전 시각은 예정이 아닌 실제 시각입니다. 분석은 재충전보다 엄격히 앞서야 합니다.":"Refill time is the ACTUAL refill. Analysis must be strictly before refill."}</li>
+   <li>${ko?"재측정 시 최초 결과를 덮어쓰지 말고 후속 보고서와 비고에 연결합니다.":"After a retest, keep the original result and link the retest in the investigation report and notes."}</li>
+   <li>${ko?"Cr·Ni는 추가 모니터링 항목으로 SP 수치 기준이 없습니다.":"Cr and Ni are advisory monitoring items with no SP limit."}</li>
+  </ul>
+  <p class="muted">${ko?"이 앱의 판정은 개별 참여(party status) 승인이나 검사 면제 승인을 대신하지 않습니다. 승인 근거는 탱크 등록부에 별도로 관리하세요.":"Statuses here do not establish party-status approval or the inspection exemption itself. Keep authorization evidence in the tank register."}</p>
+  <p class="ref">49 CFR §§ 180.352(b)(3), 180.605(c)(1) · 107.107 (party status)</p>
+  </section>`;
+}
+
+/* ---------------- record form ---------------- */
+let draft=null, draftNew=false, draftUploads=[];
+function sel(id,opts,val,blank=true){ return `<select id="${id}">${blank?`<option value=""></option>`:""}${opts.map(o=>`<option value="${esc(o)}" ${val===o?"selected":""}>${esc(opL(o))}</option>`).join("")}</select>`; }
+function inp(id,val,type="text",extra=""){ return `<input id="${id}" type="${type}" value="${esc(val??"")}" ${extra}>`; }
+function F(key,label,html,req){ return `<label class="f ${req?"req":""}"><span>${label}</span>${html}</label>`; }
+function nextRecordId(){
+  const d=new Date(), base=`T-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-`;
+  let n=1; while(S.records.some(r=>r.recordId===base+pad(n))) n++; return base+pad(n);
+}
+function openRecord(id){
+  const r = id ? S.records.find(x=>x.id===id) : null;
+  draftNew = !r; draftUploads=[];
+  const t0 = S.tanks.find(x=>x.tankId===S.filter.tank) || S.tanks[0];
+  draft = r ? JSON.parse(JSON.stringify(r)) : {id:uid("r_"), recordId:nextRecordId(), tankId:t0?.tankId||"", product:t0?.product||"", stage:"After filling", feType:"Measured", crType:"", niType:"", basis:"Pending", qc:"Pending", decision:"Open", attachments:[]};
+  draft.attachments = draft.attachments || [];
+  renderRecordModal();
+}
+function renderRecordModal(){
+  const r=draft;
+  const res = (el,lab,ty,v) => `<div class="res"><h4>${lab}</h4>${F("",t("rType"),sel(`r_${el}Type`,OPT.rtype,ty))}${F("",t("rVal"),inp(`r_${el}Val`,v,"number",'step="any" min="0" inputmode="decimal"'))}</div>`;
+  document.getElementById("modalRoot").innerHTML = `<div class="modal" id="recModal"><form class="box" id="recForm" novalidate>
+   <div class="box-h"><h2>${draftNew?t("newRec"):esc(r.recordId)}</h2>${!draftNew?`<button type="button" class="btn sm" data-act="recReport" data-id="${r.id}">${t("report")}</button>`:""}<button type="button" class="btn sm" data-act="closeModal">${t("close")}</button></div>
+   <div class="box-b">
+    <fieldset><legend>${t("secStat")}</legend><div class="grid" id="liveCk" style="gap:6px"></div><div class="status-row" id="liveStatus"></div></fieldset>
+    <fieldset><legend>${t("secShip")}</legend><div class="grid g3">
+      ${F("",t("recordId"),`<div style="display:flex;gap:6px">${inp("r_recordId",r.recordId,"text",`placeholder="${esc(t("exNote"))}"`)}<button type="button" class="btn sm" data-act="genId">${t("autoId")}</button></div>`,1)}
+      ${F("",t("tankId"),`<select id="r_tankId"><option value=""></option>${S.tanks.map(x=>`<option ${r.tankId===x.tankId?"selected":""}>${esc(x.tankId)}</option>`).join("")}</select>`,1)}
+      ${F("",t("bol"),inp("r_bol",r.bol),1)}
+      ${F("",t("product"),inp("r_product",r.product),1)}
+      ${F("",t("sampleId"),inp("r_sampleId",r.sampleId),1)}
+      ${F("",t("customer"),inp("r_customer",r.customer))}
+      ${F("",t("lot"),inp("r_lot",r.lot))}
+    </div></fieldset>
+    <fieldset><legend>${t("secTime")}</legend><div class="grid g3">
+      ${F("",t("loadedAt"),inp("r_loadedAt",r.loadedAt,"datetime-local"),1)}
+      ${F("",t("sampleAt"),inp("r_sampleAt",r.sampleAt,"datetime-local"),1)}
+      ${F("",t("stage"),sel("r_stage",OPT.stage,r.stage),1)}
+      ${F("",t("unloadedAt"),inp("r_unloadedAt",r.unloadedAt,"datetime-local"),1)}
+      ${F("",t("analysisAt"),inp("r_analysisAt",r.analysisAt,"datetime-local"))}
+      ${F("",t("refillAt"),inp("r_refillAt",r.refillAt,"datetime-local"))}
+    </div><p class="muted" style="margin:8px 0 0;font-size:12px" id="dlInfo"></p></fieldset>
+    <fieldset><legend>${t("secRes")}</legend>
+      <div class="res-grid">${res("fe","Fe",r.feType,r.feVal)}${res("cr","Cr",r.crType,r.crVal)}${res("ni","Ni",r.niType,r.niVal)}</div>
+      <div class="grid g3" style="margin-top:12px">
+        ${F("",t("basis"),sel("r_basis",OPT.basis,r.basis))}
+        ${F("",t("qc"),sel("r_qc",OPT.qc,r.qc))}
+        ${F("",t("analyst"),inp("r_analyst",r.analyst))}
+        ${F("",t("runId"),inp("r_runId",r.runId))}
+      </div></fieldset>
+    <fieldset><legend>${t("secEv")}</legend>
+      <div id="attList" class="grid" style="gap:8px"></div>
+      ${assets?`<div class="drop" id="drop" style="margin-top:10px"><div>${t("dropHint")}</div><div class="toolbar" style="justify-content:center;margin-top:8px"><select id="upKind" style="width:auto">${[["icp","kIcp"],["visual","kVis"],["spark","kSpark"],["other","kOther"]].map(([k,l])=>`<option value="${k}">${t(l)}</option>`).join("")}</select><button type="button" class="btn" data-act="pickFile">${t("upload")}</button></div><input type="file" id="upFile" multiple accept="application/pdf,image/png,image/jpeg,image/webp,image/gif" hidden></div>`:`<p class="muted" style="font-size:12.5px">${t("noUpload")}</p>`}
+      <div style="margin-top:10px">${F("",t("link"),inp("r_link",r.link))}</div>
+    </fieldset>
+    <fieldset><legend>${t("secInv")}</legend><div class="grid g3">
+      ${F("",t("other"),sel("r_otherSrc",OPT.other,r.otherSrc))}
+      ${F("",t("visualAt"),inp("r_visualAt",r.visualAt,"datetime-local"))}
+      ${F("",t("sparkAt"),inp("r_sparkAt",r.sparkAt,"datetime-local"))}
+      ${F("",t("invRep"),inp("r_invReport",r.invReport))}
+    </div></fieldset>
+    <fieldset><legend>${t("secRev")}</legend><div class="grid g3">
+      ${F("",t("reviewer"),inp("r_reviewer",r.reviewer))}
+      ${F("",t("reviewedAt"),inp("r_reviewedAt",r.reviewedAt,"datetime-local"))}
+      ${F("",t("decision"),sel("r_decision",OPT.decision,r.decision))}
+    </div><div style="margin-top:12px">${F("",t("notes"),`<textarea id="r_notes">${esc(r.notes||"")}</textarea>`)}</div></fieldset>
+   </div>
+   <div class="box-f">${!draftNew?`<button type="button" class="btn danger" data-act="delRec" id="delRecBtn">${t("del")}</button><span style="flex:1"></span>`:""}<button type="button" class="btn" data-act="closeModal">${t("cancel")}</button><button type="submit" class="btn primary">${t("save")}</button></div>
+  </form></div>`;
+  renderAtt(); liveStatus();
+  const drop=document.getElementById("drop");
+  if(drop){ ["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over")})); ["dragleave","drop"].forEach(e=>drop.addEventListener(e,()=>drop.classList.remove("over"))); drop.addEventListener("drop",ev=>{ev.preventDefault(); uploadFiles(ev.dataTransfer.files);}); document.getElementById("upFile").addEventListener("change",ev=>{uploadFiles(ev.target.files); ev.target.value="";}); }
+}
+const RF = ["recordId","tankId","bol","product","sampleId","customer","lot","loadedAt","sampleAt","stage","unloadedAt","analysisAt","refillAt","feType","feVal","crType","crVal","niType","niVal","basis","qc","analyst","runId","link","otherSrc","visualAt","sparkAt","invReport","reviewer","reviewedAt","decision","notes"];
+function readForm(){ RF.forEach(k=>{ const el=document.getElementById("r_"+k); if(el) draft[k]=el.value.trim? el.value.trim() : el.value; }); return draft; }
+function liveStatus(){
+  const box=document.getElementById("liveStatus"); if(!box) return;
+  readForm();
+  const others = S.records.filter(x=>x.id!==draft.id);
+  const saveRecs=S.records; S.records=[...others, draft]; recompute(); const c=C(draft); const ck=spChecks(draft); S.records=saveRecs; recompute();
+  const lc=document.getElementById("liveCk"); if(lc) lc.innerHTML = ck.list.map((x,i)=>`<div class="ckrow"><span class="chip ${CK_TONE[x.st]}">${esc(ckLabel(i))}</span><span class="muted">${esc(x.note)}</span></div>`).join("");
+  box.innerHTML = [c.fe,c.t15,c.refill,c.follow,c.retain,c.entry].map(chip).join("") + ELS.map(el=>{ const rq = el==="fe"?c.req:el==="cr"?c.reqCr:c.reqNi; return `<span class="chip ${rq===false?"":"ok"}">${EL[el]}: ${esc(t(rq===false?"elSkip":"elDue"))}</span>`; }).join("");
+  const dl=c.deadline; const info=document.getElementById("dlInfo");
+  if(info) info.textContent = dl ? (S.lang==="ko"?`분석 기한: ${fdt(dl)} (하역 + ${S.settings.deadlineDays}일, 그리고 실제 재충전 전)`:`Analysis deadline: ${fdt(dl)} (unload + ${S.settings.deadlineDays} days, and before the actual refill)`) : "";
+}
+function renderAtt(){
+  const box=document.getElementById("attList"); if(!box) return;
+  const kinds={icp:"kIcp",visual:"kVis",spark:"kSpark",other:"kOther"};
+  box.innerHTML = draft.attachments.length ? draft.attachments.map((a,i)=>`<div class="att">
+    ${a.type&&a.type.startsWith("image/")?`<img data-thumb="${esc(a.id)}" alt="">`:`<span class="chip">PDF</span>`}
+    <span class="nm"><a href="#" data-act="openFile" data-id="${esc(a.id)}">${esc(a.name)}</a> <span class="muted mono" style="font-size:11.5px">${(a.size/1024).toFixed(0)} KB · ${fd(a.at)}</span></span>
+    <select data-att-kind="${i}" style="width:auto" aria-label="${t("attKind")}">${Object.entries(kinds).map(([k,l])=>`<option value="${k}" ${a.kind===k?"selected":""}>${t(l)}</option>`).join("")}</select>
+    ${assets?`<button type="button" class="btn sm danger" data-act="rmAtt" data-i="${i}">${t("del")}</button>`:""}
+  </div>`).join("") : `<div class="muted" style="font-size:12.5px">–</div>`;
+  box.querySelectorAll("img[data-thumb]").forEach(async im=>{ try{ im.src = URL.createObjectURL(await getFileBlob(im.dataset.thumb)); }catch(e){} });
+}
+async function uploadFiles(files){
+  if(!assets||!files||!files.length) return;
+  const kind=document.getElementById("upKind").value;
+  for(const f of files){
+    let type=f.type; if(!type && /\.pdf$/i.test(f.name)) type="application/pdf";
+    toast(`${t("uploading")} ${f.name}`);
+    try{
+      const res = await assets.upload(f, type?{type}:undefined);
+      const a={id:res.id,name:f.name,type:res.contentType,size:res.sizeBytes,kind,at:toInput(new Date())};
+      draft.attachments.push(a); draftUploads.push(res.id);
+      renderAtt(); liveStatus();
+      if(!draftNew){ readForm(); await persistRecord(true); }
+      toast(`${t("uploaded")}: ${f.name}`);
+    }catch(e){ toast(`${f.name}: ${e.code||""} ${e.message||e}`); }
+  }
+}
+async function persistRecord(silent){
+  const r = {...draft}; delete r.id; r.updatedAt = new Date().toISOString();
+  await putDoc("records", draft.id, r);
+  if(!silent) toast(t("saved"));
+}
+async function saveRecord(){
+  readForm();
+  if(!draft.recordId||!draft.tankId){ toast(t("needId")); return; }
+  if(S.records.some(x=>x.id!==draft.id && x.recordId===draft.recordId)){ toast(t("dupId")); return; }
+  try{ await persistRecord(false); draftUploads=[]; closeModal(); }catch(e){ toast("Save failed: "+(e.message||e)); }
+}
+async function closeModal(cancel){
+  if(cancel && draftNew && draftUploads.length && assets){ for(const id of draftUploads){ try{ await assets.delete(id);}catch(e){} } }
+  draftUploads=[]; document.getElementById("modalRoot").innerHTML=""; draft=null; tDraft=null;
+}
+
+/* ---------------- tank form ---------------- */
+let tDraft=null, tNew=false;
+function openTank(id){
+  const x = id ? S.tanks.find(k=>k.id===id) : null; tNew=!x;
+  tDraft = x ? JSON.parse(JSON.stringify(x)) : {id:uid("t_"),tankId:"",product:"",lining:"",dedicated:"Not confirmed",identified:"Not confirmed",party:"Not confirmed",active:true,sp:true,cycles:defCycles()};
+  const cs=cyclesOf(tDraft);
+  document.getElementById("modalRoot").innerHTML = `<div class="modal"><form class="box" id="tankForm" novalidate>
+   <div class="box-h"><h2>${tNew?t("newTank"):esc(tDraft.tankId)}</h2><button type="button" class="btn sm" data-act="closeModal">${t("close")}</button></div>
+   <div class="box-b">
+    <fieldset><legend>${t("cycle")}</legend>
+      <div class="grid g2">${F("",t("spApply"),sel("k_sp",["Yes","No"],isSp(tDraft)?"Yes":"No",false))}</div>
+      <div class="grid g3" style="margin-top:10px">${cycleInputs("k",cs)}</div>
+      <div class="banner warn" id="cycWarnBox" style="margin-top:10px;font-size:12.5px" ${spWarn(tDraft)?"":"hidden"}>${esc(t("cycWarn"))}</div></fieldset>
+    <fieldset><legend>${t("tabTanks")}</legend><div class="grid g3">
+      ${F("",t("tankId"),inp("k_tankId",tDraft.tankId),1)}
+      ${F("",S.lang==="ko"?"전용 제품":"Dedicated product",inp("k_product",tDraft.product))}
+      ${F("",t("lining"),inp("k_lining",tDraft.lining,"text",'placeholder="Fluoroclad PTFE / m-PTFE"'))}
+      ${F("",t("dedicated"),sel("k_dedicated",OPT.yn,tDraft.dedicated,false))}
+      ${F("",t("identified"),sel("k_identified",OPT.yn,tDraft.identified,false))}
+      ${F("",t("party"),sel("k_party",OPT.party,tDraft.party,false))}
+      ${F("",t("authRef"),inp("k_authRef",tDraft.authRef))}
+      ${F("",t("validUntil"),inp("k_validUntil",tDraft.validUntil,"date"))}
+      ${F("",t("procRef"),inp("k_procRef",tDraft.procRef))}
+      ${F("",t("active"),sel("k_active",["Yes","No"],tDraft.active===false?"No":"Yes",false))}
+    </div></fieldset>
+   </div>
+   <div class="box-f">${!tNew?`<button type="button" class="btn danger" data-act="delTank" id="delTankBtn">${t("del")}</button><span style="flex:1"></span>`:""}<button type="button" class="btn" data-act="closeModal">${t("cancel")}</button><button type="submit" class="btn primary">${t("save")}</button></div>
+  </form></div>`;
+}
+async function saveTank(){
+  const g=k=>document.getElementById("k_"+k).value.trim();
+  const d={...tDraft, tankId:g("tankId"), product:g("product"), lining:g("lining"), dedicated:g("dedicated"), identified:g("identified"), party:g("party"), authRef:g("authRef"), validUntil:g("validUntil"), procRef:g("procRef"), active:g("active")!=="No", sp:g("sp")!=="No", cycles:readCycles("k")}; d.cycle=d.cycles.fe;
+  if(!d.tankId){ toast(t("needTank")); return; }
+  if(S.tanks.some(x=>x.id!==d.id && x.tankId===d.tankId)){ toast(t("dupTank")); return; }
+  const id=d.id; delete d.id;
+  try{ await putDoc("tanks", id, d); toast(t("saved")); closeModal(); }catch(e){ toast("Save failed: "+(e.message||e)); }
+}
+
+/* ---------------- reports ---------------- */
+const RL = {
+ en:{title:"Lined Tank Contamination Analysis Record", ttitle:"Tank Contamination Analysis History", gen:"Generated", s1:"1. Tank and shipment", s2:"2. Timeline and analysis timing", s3:"3. ICP-MS results (product basis)", s4:"5. Fe investigation and inspections", s5:"6. Review", s3b:"4. DOT-SP 11827 checklist", item:"Check", result:"Result", detail:"Basis / detail", ckSum:"DOT-SP 11827 checklist summary", recs:"records", s6:"Evidence attached", cert:"Certification", certYes:"Meets criteria for exemption from interior visual inspection per DOT-SP 11827.", certNo:"Certification statement withheld. Open items:", analyte:"Analyte", type:"Result type", value:"Result (ppb)", crit:"Criterion", screen:"Screening", feCrit:"Investigate if ≥ {v} ppb (SP 11827 §7(b))", adv:"Advisory monitoring, no SP limit", method:"Method", basis:"Product basis confirmed", qc:"Laboratory QC", analyst:"Lab / analyst", run:"Report / run ID", deadline:"Analysis deadline", status15:"Deadline status", statusRf:"Before-refill status", retain:"Retention", follow:"Follow-up status", entry:"Record status", prep:"Prepared by", rev:"Reviewed by", date:"Date", none:"None attached", appended:"appended", listed:"listed only", page:"Page", cycle:"Measurement cycle", rules:"Rules applied", rulesV:"Fe trigger {f} ppb · analysis ≤ {d} days after unloading and before actual refill · retain ≥ {n} recent shipments", retainNote:"Records of contamination analysis are retained for at least the five most recent shipments (DOT-SP 11827 §7(c)).", scope:"Scope", shipments:"Shipments", certSum:"Certification status"},
+ ko:{title:"라이닝 탱크 오염 분석 기록", ttitle:"탱크 오염 분석 이력", gen:"작성일", s1:"1. 탱크 및 출하", s2:"2. 일정 및 분석 기한", s3:"3. ICP-MS 결과 (원제품 기준)", s4:"5. Fe 조사 및 검사", s5:"6. 검토", s3b:"4. DOT-SP 11827 점검", item:"점검 항목", result:"결과", detail:"근거 / 내용", ckSum:"DOT-SP 11827 점검 요약", recs:"건", s6:"첨부 증빙", cert:"확인", certYes:"Meets criteria for exemption from interior visual inspection per DOT-SP 11827.", certNo:"확인 문구 보류. 미결 항목:", analyte:"원소", type:"결과 종류", value:"결과 (ppb)", crit:"기준", screen:"판정", feCrit:"{v} ppb 이상이면 조사 (SP 11827 §7(b))", adv:"추가 모니터링, SP 기준 없음", method:"분석법", basis:"원제품 기준 확인", qc:"분석 QC", analyst:"분석기관 / 분석자", run:"보고서 / Run ID", deadline:"분석 기한", status15:"기한 판정", statusRf:"재충전 전 판정", retain:"보관", follow:"후속 상태", entry:"기록 상태", prep:"작성", rev:"검토", date:"일자", none:"첨부 없음", appended:"뒤에 첨부", listed:"목록만", page:"페이지", cycle:"측정 주기", rules:"적용 기준", rulesV:"Fe 조사 기준 {f} ppb · 하역 후 {d}일 이내 및 실제 재충전 전 분석 · 탱크별 최근 {n}회 이상 보관", retainNote:"오염 분석 기록은 최소 최근 5회 출하분 이상 보관합니다 (DOT-SP 11827 §7(c)).", scope:"범위", shipments:"출하 수", certSum:"확인 상태"}
+};
+let rLang="en";
+const R = k => RL[rLang][k];
+const rSt = s => rLang==="ko" ? (ST_KO[s]||s) : s;
+const rOp = s => rLang==="ko" ? (OPT_KO[s]||s) : s;
+const ckP = st => ({ok:"ok",pend:"warn",warn:"warn",bad:"bad",na:"mute"}[st]);
+const ckWord = st => (rLang==="ko"?{ok:"적합",pend:"대기",warn:"미흡",bad:"부적합",na:"해당없음"}:{ok:"Pass",pend:"Pending",warn:"Incomplete",bad:"Fail",na:"N/A"})[st];
+const pill = s => s?`<span class="pill p-${tone(s)}">${esc(rSt(s))}</span>`:"–";
+function rHead(title, sub){
+  return `<div class="rh"><div><div class="co">${esc(S.settings.company)}</div><div class="ad">${esc(S.settings.address)}</div><div class="ad">DOT-SP 11827 (32nd Rev., April 23, 2020)</div></div>
+  <div class="tt"><b>${esc(title)}</b><div class="mono">${esc(sub)}</div><div class="mono">${R("gen")}: ${fdt(new Date())} ${esc((S.settings.tz||"").replace(/\s*\(.*\)/,""))}</div></div></div>`;
+}
+const rFoot = (p,n) => `<div class="rf"><span>${esc(COPY)}</span><span class="mono" style="white-space:nowrap">${R("page")} ${p} / ${n}</span></div>`;
+function resVal(ty,v){ if(!ty) return "–"; if(ty==="Not tested") return rOp("Not tested"); return (ty==="<LOQ"?"&lt; ":"")+esc(v??""); }
+const kinds = () => ({icp:rLang==="ko"?"ICP-MS 성적서":"ICP-MS report",visual:rLang==="ko"?"육안 검사":"Visual inspection",spark:rLang==="ko"?"스파크 검사":"Spark test",other:rLang==="ko"?"기타":"Other"});
+
+function recordPages(r, incEv){
+  const c=C(r), tank=S.tanks.find(x=>x.tankId===r.tankId)||{}, ok=certOk(r);
+  const kv = (rows,cls="kvt") => `<table class="${cls}"><tbody>${rows.map(rw=>`<tr>${rw.map(([k,v])=>`<th>${esc(k)}</th><td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  const ck = spChecks(r, rLang);
+  const p1 = `<div class="rpage">${rHead(R("title"), `Record ${r.recordId} · Tank ${r.tankId}`)}
+   <h5>${R("s1")}</h5>
+   ${kv([[["Tank ID",`<span class="mono">${esc(r.tankId)}</span>`],["Shipment / BOL",esc(r.bol)],["Product",esc(r.product)]],[["Dedicated",esc(tank.product||"–")],["Lining",esc(tank.lining||"–")],["Customer",esc(r.customer||"–")]],[["Sample ID",`<span class="mono">${esc(r.sampleId||"–")}</span>`],["Lot / batch",esc(r.lot||"–")],["Sample stage",esc(rOp(r.stage)||"–")]]],"kvt3")}
+   <h5>${R("s2")}</h5>
+   ${kv([[["Loaded",fdt(r.loadedAt)||"–"],["Sampled",fdt(r.sampleAt)||"–"],["Unloaded",fdt(r.unloadedAt)||"–"]],[["Analyzed",fdt(r.analysisAt)||"–"],[R("deadline"),c.deadline?fdt(c.deadline):"–"],["Next refill",fdt(r.refillAt)||"–"]],[[R("status15"),pill(c.t15)],[R("statusRf"),pill(c.refill)],[R("retain"),pill(c.retain)]]],"kvt3")}
+   <h5>${R("s3")}</h5>
+   <table><thead><tr><th>${R("analyte")}</th><th>${R("type")}</th><th style="text-align:right">${R("value")}</th><th>${R("crit")}</th><th>${R("screen")}</th></tr></thead><tbody>
+    <tr><td><b>Fe</b></td><td>${esc(rOp(r.feType)||"–")}</td><td class="num">${resVal(r.feType,r.feVal)}</td><td>${esc(R("feCrit").replace("{v}",S.settings.feTrigger))}</td><td>${pill(c.fe)}</td></tr>
+    <tr><td><b>Cr</b></td><td>${esc(rOp(r.crType)||"–")}</td><td class="num">${resVal(r.crType,r.crVal)}</td><td>${R("adv")}</td><td>${c.reqCr===false&&!analyzedEl(r,"cr")?pill("Not required by cycle"):"–"}</td></tr>
+    <tr><td><b>Ni</b></td><td>${esc(rOp(r.niType)||"–")}</td><td class="num">${resVal(r.niType,r.niVal)}</td><td>${R("adv")}</td><td>${c.reqNi===false&&!analyzedEl(r,"ni")?pill("Not required by cycle"):"–"}</td></tr>
+   </tbody></table>
+   ${kv([[[R("method"),"ICP-MS"],[R("analyst"),esc(r.analyst||"–")],[R("run"),`<span class="mono">${esc(r.runId||"–")}</span>`]],[[R("basis"),esc(rOp(r.basis)||"–")],[R("qc"),esc(rOp(r.qc)||"–")],[R("s6"),String((r.attachments||[]).length)]]],"kvt3")}
+   <h5>${R("cert")}</h5>
+   ${ok?`<div class="cert"><b>${esc(R("certYes"))}</b><div class="note" style="margin-top:4px">Tank ${esc(r.tankId)} · Shipment ${esc(r.bol)} · Fe ${resVal(r.feType,r.feVal)} ppb · ${esc(rSt(c.t15))}</div></div>`
+      :`<div class="cert no"><b>${esc(R("certNo"))}</b> ${openItems(r).map(s=>pill(s)).join(" ")} ${ck.list.map((x,i)=>x.st==="ok"||x.st==="na"?"":`<span class="pill p-${ckP(x.st)}">${"①②③④"[i]} ${ckWord(x.st)}</span>`).join(" ")}</div>`}
+   <div class="note"><b>DOT-SP 11827 ①–④:</b> ${ck.list.map((x,i)=>`${"①②③④"[i]} <span class="pill p-${ckP(x.st)}">${ckWord(x.st)}</span>`).join(" &nbsp; ")} &nbsp;(${rLang==="ko"?"상세는 2페이지":"details on page 2"})</div>
+   <div class="note">${esc(R("rules").toUpperCase())}: ${esc(R("rulesV").replace("{f}",S.settings.feTrigger).replace("{d}",S.settings.deadlineDays).replace("{n}",S.settings.recentN))} · ${esc(R("cycle"))}: ${esc(cyclesLabelR(tank))}</div>
+   ${rFoot(1,2)}</div>`;
+  const atts = r.attachments||[], kd=kinds();
+  const p2 = `<div class="rpage">${rHead(R("title"), `Record ${r.recordId} · Tank ${r.tankId}`)}
+   <h5>${R("s3b")}</h5>
+   <table><thead><tr><th style="width:36%">${R("item")}</th><th style="width:11%">${R("result")}</th><th>${R("detail")}</th></tr></thead><tbody>
+    ${ck.list.map((x,i)=>`<tr><td>${esc(ckLabel(i,rLang))}</td><td><span class="pill p-${ckP(x.st)}">${ckWord(x.st)}</span></td><td>${esc(x.note)}</td></tr>`).join("")}
+   </tbody></table>
+   <h5>${R("s4")}</h5>
+   ${kv([[["Fe screening",pill(c.fe)],[R("follow"),pill(c.follow)]],[["Other-source investigation",esc(rOp(r.otherSrc)||"–")],["Investigation / retest report",esc(r.invReport||"–")]],[["Visual inspection at",fdt(r.visualAt)||"–"],["Spark test at",fdt(r.sparkAt)||"–"]]])}
+   <h5>${R("s5")}</h5>
+   ${kv([[["Reviewed by",esc(r.reviewer||"–")],["Reviewed at",fdt(r.reviewedAt)||"–"]],[["Review decision",esc(rOp(r.decision)||"–")],[R("entry"),pill(c.entry)]]])}
+   ${r.notes?`<table><tbody><tr><th style="width:22%">Notes</th><td style="white-space:pre-wrap">${esc(r.notes)}</td></tr></tbody></table>`:""}
+   <h5>${R("s6")}</h5>
+   ${atts.length||r.link?`<table class="small"><thead><tr><th>#</th><th>${rLang==="ko"?"구분":"Type"}</th><th>${rLang==="ko"?"파일":"File"}</th><th>${rLang==="ko"?"등록":"Added"}</th><th></th></tr></thead><tbody>
+     ${atts.map((a,i)=>`<tr><td class="mono">A${i+1}</td><td>${esc(kd[a.kind]||a.kind)}</td><td>${esc(a.name)}</td><td class="mono">${fd(a.at)}</td><td>${incEv?R("appended"):R("listed")}</td></tr>`).join("")}
+     ${r.link?`<tr><td class="mono">L</td><td>Link</td><td colspan="3" style="word-break:break-all">${esc(r.link)}</td></tr>`:""}
+   </tbody></table>`:`<div class="note">${R("none")}</div>`}
+   <div class="note">${esc(R("retainNote"))}</div>
+   <div class="sig"><div>${R("prep")}: ${esc(S.settings.preparer||"")}</div><div>${R("rev")}: ${esc(r.reviewer||"")}</div><div>${R("date")}</div></div>
+   ${rFoot(2,2)}</div>`;
+  return {pages:[p1,p2], attachments: incEv ? atts.map((a,i)=>({...a,label:`A${i+1}`,rec:r.recordId})) : []};
+}
+const cyclesLabelR = tank => { const cs=cyclesOf(tank); return ELS.map(el=>`${EL[el]}: ${cycleLabelR(cs[el])}`).join(" · "); };
+function cycleLabelR(cy){ cy=cy||{mode:"shipment"}; if(cy.mode==="weekly") return rLang==="ko"?"주 1회":"Weekly"; if(cy.mode==="monthly") return rLang==="ko"?"월 1회":"Monthly"; if(cy.mode==="every_n") return rLang==="ko"?`${cy.n}회 출하마다`:`Every ${cy.n} shipments`; if(cy.mode==="days") return rLang==="ko"?`${cy.n}일마다`:`Every ${cy.n} days`; return rLang==="ko"?"매 출하마다":"Every shipment"; }
+function tankPages(tank, scope, incEv){
+  let recs = S.records.filter(r=>r.tankId===tank.tankId).sort((a,b)=>(pd(b.loadedAt)||0)-(pd(a.loadedAt)||0));
+  if(scope==="recent") recs = recs.filter(r=>C(r).retain==="Recent - retain");
+  const per=14, chunks=[]; for(let i=0;i<Math.max(1,recs.length);i+=per) chunks.push(recs.slice(i,i+per));
+  const n=chunks.length;
+  const kvRow = (a,b,c,d)=>`<tr><th>${a}</th><td>${b}</td><th>${c}</th><td>${d}</td></tr>`;
+  const pages = chunks.map((ch,pi)=>`<div class="rpage">${rHead(R("ttitle"), `Tank ${tank.tankId} · ${scope==="recent"?(rLang==="ko"?"최근 보관 대상":"Recent – retain"):(rLang==="ko"?"전체 이력":"Full history")}`)}
+   ${pi===0?`<h5>${R("s1")}</h5><table class="kvt"><tbody>
+     ${kvRow("Tank ID",`<span class="mono">${esc(tank.tankId)}</span>`,"Dedicated product",esc(tank.product||"–"))}
+     ${kvRow("Lining",esc(tank.lining||"–"),"Dedicated service",esc(rOp(tank.dedicated)||"–"))}
+     ${kvRow("Identified to OHMSAPD",esc(rOp(tank.identified)||"–"),"Party-status approval",esc(rOp(tank.party)||"–"))}
+     ${kvRow("Authorization ref.",esc(tank.authRef||"–"),"Valid until",esc(tank.validUntil||"–"))}
+     ${kvRow("Procedure / evidence",esc(tank.procRef||"–"),R("cycle"),esc(cyclesLabelR(tank)))}
+   </tbody></table>
+   <div class="note">${esc(R("rules").toUpperCase())}: ${esc(R("rulesV").replace("{f}",S.settings.feTrigger).replace("{d}",S.settings.deadlineDays).replace("{n}",S.settings.recentN))}</div>
+   <h5>${R("ckSum")}</h5>
+   <table><thead><tr><th style="width:42%">${R("item")}</th><th style="width:16%">${R("result")}</th><th>${R("detail")}</th></tr></thead><tbody>
+    ${[0,1,2].map(i=>{ const ks=recs.map(r=>spChecks(r,rLang).list[i]); const okN=ks.filter(k=>k.st==="ok"||k.st==="na").length, bad=ks.filter(k=>k.st==="bad"||k.st==="warn").length, pend=ks.filter(k=>k.st==="pend").length; const st=bad?"bad":pend?"pend":"ok"; const ids=recs.filter((r,j)=>ks[j].st!=="ok"&&ks[j].st!=="na").map(r=>r.recordId).join(", "); return `<tr><td>${esc(ckLabel(i,rLang))}</td><td><span class="pill p-${ckP(st)}">${ckWord(st)}</span> <span class="mono">${okN}/${recs.length}</span></td><td>${ids?esc(ids):"–"}</td></tr>`; }).join("")}
+    ${(()=>{ const k=tankC4(tank.tankId,rLang); return `<tr><td>${esc(ckLabel(3,rLang))}</td><td><span class="pill p-${ckP(k.st)}">${ckWord(k.st)}</span></td><td>${esc(k.note)}</td></tr>`; })()}
+   </tbody></table>`:""}
+   <h5>${R("shipments")} (${recs.length})</h5>
+   <table class="small"><thead><tr><th>Record</th><th>BOL</th><th>Unloaded</th><th>Analysis</th><th style="text-align:right">Fe</th><th style="text-align:right">Cr</th><th style="text-align:right">Ni</th><th>Fe screening</th><th>${S.settings.deadlineDays}-day</th><th>Refill</th><th>①②③④</th></tr></thead><tbody>
+    ${ch.length?ch.map(r=>{const c=C(r);return `<tr><td class="mono">${esc(r.recordId)}</td><td>${esc(r.bol)}</td><td class="mono">${fd(r.unloadedAt)}</td><td class="mono">${fd(r.analysisAt)}</td><td class="num">${resVal(r.feType,r.feVal)}</td><td class="num">${resVal(r.crType,r.crVal)}</td><td class="num">${resVal(r.niType,r.niVal)}</td><td>${pill(c.fe)}</td><td>${pill(c.t15)}</td><td>${pill(c.refill)}</td><td style="white-space:nowrap">${spChecks(r,rLang).list.map((x,i)=>`<span class="pill p-${ckP(x.st)}" style="padding:1px 4px">${i+1}</span>`).join(" ")}</td></tr>`}).join(""):`<tr><td colspan="11">–</td></tr>`}
+   </tbody></table>
+   ${pi===n-1?`<div class="note">①–④: ${[0,1,2,3].map(i=>esc(ckLabel(i,rLang).slice(2))).join(" / ")}</div><div class="note">${esc(R("retainNote"))}</div><div class="sig"><div>${R("prep")}: ${esc(S.settings.preparer||"")}</div><div>${R("rev")}</div><div>${R("date")}</div></div>`:""}
+   ${rFoot(pi+1,n)}</div>`);
+  const atts=[]; if(incEv) recs.forEach(r=>(r.attachments||[]).forEach((a,i)=>atts.push({...a,label:`${r.recordId}-A${i+1}`,rec:r.recordId})));
+  return {pages, attachments:atts};
+}
+
+let rep=null; // {kind,id,scope,incEv}
+function openReport(kind,id){
+  rep = {kind,id,scope:"recent",incEv:true};
+  rLang = "en";
+  draft=null; tDraft=null;
+  renderReport();
+}
+function buildRep(){
+  if(rep.kind==="rec"){ const r=S.records.find(x=>x.id===rep.id); return r?recordPages(r,rep.incEv):null; }
+  const tk=S.tanks.find(x=>x.id===rep.id); return tk?tankPages(tk,rep.scope,rep.incEv):null;
+}
+function renderReport(){
+  const b = buildRep(); if(!b) return;
+  document.getElementById("modalRoot").innerHTML = `<div class="modal"><div class="box wide">
+   <div class="box-h"><h2>${t("preview")}</h2>
+     <label class="f" style="flex-direction:row;align-items:center;gap:6px"><span>${t("rLang")}</span><select id="rpLang" style="width:auto"><option value="en" ${rLang==="en"?"selected":""}>English</option><option value="ko" ${rLang==="ko"?"selected":""}>한국어</option></select></label>
+     ${rep.kind==="tank"?`<label class="f" style="flex-direction:row;align-items:center;gap:6px"><span>${t("scope")}</span><select id="rpScope" style="width:auto"><option value="recent" ${rep.scope==="recent"?"selected":""}>${t("scRecent")}</option><option value="all" ${rep.scope==="all"?"selected":""}>${t("scAll")}</option></select></label>`:""}
+     <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="rpEv" style="width:auto" ${rep.incEv?"checked":""}>${t("incEv")} <span class="muted mono">(${b.attachments.length||(rep.incEv?0:"–")})</span></label>
+     <button type="button" class="btn sm" data-act="closeModal">${t("close")}</button></div>
+   <div class="box-b"><div class="banner info">${t("printHint")}</div><div class="preview-pages" id="pvPages">${b.pages.map(p=>`<div class="pv"><div class="scaler">${p}</div></div>`).join("")}</div></div>
+   <div class="box-f"><button type="button" class="btn" data-act="closeModal">${t("close")}</button><button type="button" class="btn" data-act="printPdf">${t("printBtn")}</button><button type="button" class="btn primary" data-act="dlPdf" id="dlBtn">${t("dlPdf")}</button></div>
+  </div></div>`;
+  fitPreview();
+}
+function fitPreview(){
+  document.querySelectorAll(".pv").forEach(pv=>{ const w=pv.clientWidth||794, s=Math.min(1,w/794); const sc=pv.querySelector(".scaler"); sc.style.transform=`scale(${s})`; pv.style.height=(1123*s)+"px"; });
+}
+window.addEventListener("resize",()=>{ if(document.querySelector(".pv")) fitPreview(); });
+
+function u8FromDataURL(d){ const b=atob(d.split(",")[1]); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+const ascii = s => String(s).normalize("NFKD").replace(/[^\x20-\x7E]/g,"").replace(/\s+/g," ").trim();
+async function imgToPng(blob){
+  const url=URL.createObjectURL(blob);
+  try{ const im=await new Promise((res,rej)=>{const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url;});
+    const c=document.createElement("canvas"); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext("2d").drawImage(im,0,0);
+    return u8FromDataURL(c.toDataURL("image/png")); } finally{ URL.revokeObjectURL(url); }
+}
+async function buildPdf(printWin){
+  const btn=document.getElementById("dlBtn"); const b=buildRep(); if(!b||!downloads) return;
+  btn.disabled=true; btn.textContent=t("building");
+  const host=document.createElement("div"); host.className="rhost"; host.innerHTML=b.pages.join(""); document.body.appendChild(host);
+  const failed=[];
+  try{
+    try{ await document.fonts.ready; }catch(e){}
+    const {PDFDocument, StandardFonts, rgb} = PDFLib;
+    const out = await PDFDocument.create();
+    out.setTitle(rep.kind==="rec"?"DOT-SP 11827 Contamination Record":"DOT-SP 11827 Tank History"); out.setAuthor(S.settings.company); out.setProducer("JNFAM Tank ICP-MS Log"); out.setSubject(COPY);
+    const W=595.28, H=841.89;
+    for(const el of host.querySelectorAll(".rpage")){
+      const cv = await html2canvas(el,{scale:2,backgroundColor:"#ffffff",logging:false,useCORS:true});
+      const jpg = await out.embedJpg(u8FromDataURL(cv.toDataURL("image/jpeg",0.92)));
+      out.addPage([W,H]).drawImage(jpg,{x:0,y:0,width:W,height:H});
+    }
+    const font = await out.embedFont(StandardFonts.Helvetica);
+    for(const a of b.attachments){
+      try{
+        const blob = await getFileBlob(a.id); const type = a.type || blob.type; const cap = ascii(`Evidence ${a.label} - Record ${a.rec} - ${a.name}`) || `Evidence ${a.label}`;
+        if(/pdf/.test(type)){
+          const src = await PDFDocument.load(await blob.arrayBuffer(),{ignoreEncryption:true});
+          const pages = await out.copyPages(src, src.getPageIndices());
+          pages.forEach(p=>{ out.addPage(p); const {width}=p.getSize(); p.drawRectangle({x:0,y:0,width,height:14,color:rgb(1,1,1),opacity:0.85}); p.drawText(cap.slice(0,140),{x:8,y:4,size:7,font,color:rgb(0.2,0.25,0.3)}); });
+        } else {
+          const bytes = /png/.test(type) ? new Uint8Array(await blob.arrayBuffer()) : /jpe?g/.test(type) ? null : await imgToPng(blob);
+          const img = /jpe?g/.test(type) ? await out.embedJpg(new Uint8Array(await blob.arrayBuffer())) : await out.embedPng(bytes);
+          const p = out.addPage([W,H]); const m=36, top=28;
+          p.drawText(cap.slice(0,120),{x:m,y:H-m,size:9,font,color:rgb(0.05,0.35,0.42)});
+          const sc = Math.min((W-2*m)/img.width,(H-2*m-top)/img.height,1.5);
+          p.drawImage(img,{x:(W-img.width*sc)/2,y:H-m-top-img.height*sc,width:img.width*sc,height:img.height*sc});
+        }
+      }catch(e){ failed.push(a.name); }
+    }
+    const bytes = await out.save();
+    const r = rep.kind==="rec" ? S.records.find(x=>x.id===rep.id) : null; const tk = rep.kind==="tank" ? S.tanks.find(x=>x.id===rep.id) : null;
+    const fname = (rep.kind==="rec" ? `SP11827_Record_${r.recordId}_${r.tankId}` : `SP11827_Tank_${tk.tankId}_${rep.scope}`) + `_${fd(new Date())}.pdf`;
+    const pdfBlob = new Blob([bytes],{type:"application/pdf"});
+    if(printWin){ printWin.location.href = URL.createObjectURL(pdfBlob); }
+    else await downloads.save({filename: fname.replace(/[^\w.\-]+/g,"_"), data: pdfBlob});
+    toast(failed.length ? t("evFail")+failed.join(", ") : t("pdfOk"));
+  }catch(e){
+    if(printWin) printWin.close();
+    if(e && e.code==="declined"){} else toast(t("pdfFail")+(e.code||"")+" "+(e.message||e));
+  }finally{ host.remove(); btn.disabled=false; btn.textContent=t("dlPdf"); }
+}
+
+/* ---------------- Excel export / import ---------------- */
+const XH = ["Record ID","Tank ID","Shipment / BOL","Product / strength","Sample ID","Fe result type","Fe value / limit (ppb)","Cr result type","Cr value / limit (ppb)","Ni result type","Ni value / limit (ppb)","Fe screening","Analysis completed at","Loaded at","Unloaded at","Next ACTUAL refill at","Sample collected at","Sample stage","15-day deadline","15-day status","Before-refill status","Product basis confirmed?","Laboratory QC","Lab / analyst","ICP-MS report / run ID","Customer / receiver","Lot / batch","Retention group","Other-source investigation","Visual inspection at","Spark test at","Investigation / retest report","Follow-up record status","Reviewed by","Reviewed at","Review decision","Original result file / link","Notes","Entry status","Evidence files"];
+const XK = ["recordId","tankId","bol","product","sampleId","feType","feVal","crType","crVal","niType","niVal",null,"analysisAt","loadedAt","unloadedAt","refillAt","sampleAt","stage",null,null,null,"basis","qc","analyst","runId","customer","lot",null,"otherSrc","visualAt","sparkAt","invReport",null,"reviewer","reviewedAt","decision","link","notes"];
+const DTK = new Set(["analysisAt","loadedAt","unloadedAt","refillAt","sampleAt","visualAt","sparkAt","reviewedAt"]);
+async function exportXlsx(){
+  if(!downloads){ toast(t("noDl")); return; }
+  const rows = S.records.slice().sort((a,b)=>(pd(a.loadedAt)||0)-(pd(b.loadedAt)||0)).map(r=>{const c=C(r); return [
+    r.recordId,r.tankId,r.bol,r.product,r.sampleId,r.feType,num(r.feVal),r.crType,num(r.crVal),r.niType,num(r.niVal),c.fe,pd(r.analysisAt),pd(r.loadedAt),pd(r.unloadedAt),pd(r.refillAt),pd(r.sampleAt),r.stage,c.deadline,c.t15,c.refill,r.basis,r.qc,r.analyst,r.runId,r.customer,r.lot,c.retain,r.otherSrc,pd(r.visualAt),pd(r.sparkAt),r.invReport,c.follow,r.reviewer,pd(r.reviewedAt),r.decision,r.link,r.notes,c.entry,(r.attachments||[]).map(a=>a.name).join("; ")].map(v=>v===undefined?"":v)});
+  const ws = XLSX.utils.aoa_to_sheet([["JNFAM Tank ICP-MS Measurement Log"],[`Exported ${fdt(new Date())} · Fe trigger ${S.settings.feTrigger} ppb · ${S.settings.deadlineDays} days · recent ${S.settings.recentN}`],[],XH,...rows],{cellDates:true,dateNF:"yyyy-mm-dd hh:mm"});
+  ws["!cols"]=XH.map(h=>({wch:Math.max(12,Math.min(28,h.length+2))}));
+  const wt = XLSX.utils.aoa_to_sheet([["Tank ID","Dedicated product","Lining material","Dedicated service confirmed?","Tank identified to authority?","Party-status approval","Authorization reference","Valid until","Procedure / evidence ref","SP 11827","Fe cycle","Fe N","Cr cycle","Cr N","Ni cycle","Ni N","In service"],...S.tanks.map(x=>{const cs=cyclesOf(x);return [x.tankId,x.product,x.lining,x.dedicated,x.identified,x.party,x.authRef,x.validUntil,x.procRef,isSp(x)?"Yes":"No",cs.fe.mode,cs.fe.n,cs.cr.mode,cs.cr.n,cs.ni.mode,cs.ni.n,x.active===false?"No":"Yes"]})]);
+  const wc = XLSX.utils.aoa_to_sheet([[COPY]]);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Shipment Log"); XLSX.utils.book_append_sheet(wb,wt,"Tank Register"); XLSX.utils.book_append_sheet(wb,wc,"Copyright");
+  const buf = XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  try{ await downloads.save({filename:`JNFAM_Tank_ICPMS_Log_${fd(new Date())}.xlsx`, data:new Blob([buf])}); toast(t("pdfOk").replace("PDF","Excel")); }catch(e){ if(e.code!=="declined") toast(e.code+" "+(e.message||"")); }
+}
+function cellStr(v){ if(v instanceof Date) return toInput(v); if(v===null||v===undefined) return ""; return String(v).trim(); }
+async function importXlsx(file){
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(),{cellDates:true});
+    const findHdr = (ws,first) => { const a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); const i=a.findIndex(r=>r&&String(r[0]||"").trim()===first); return i<0?null:{hdr:a[i].map(h=>String(h||"").replace(/\s+/g," ").trim()),rows:a.slice(i+1)}; };
+    let nt=0,nr=0,skip=0;
+    const tw = wb.Sheets["Tank Register"]; const th = tw && findHdr(tw,"Tank ID");
+    if(th){ for(const row of th.rows){ const id=cellStr(row[0]); if(!id) continue; if(S.tanks.some(x=>x.tankId===id)){skip++;continue;}
+      const g=n=>cellStr(row[th.hdr.findIndex(h=>h.startsWith(n))]);
+      await putDoc("tanks",uid("t_"),{tankId:id,product:g("Dedicated product"),lining:g("Lining"),dedicated:g("Dedicated service")||"Not confirmed",identified:g("Tank identified")||"Not confirmed",party:g("Party-status")||"Not confirmed",authRef:g("Authorization"),validUntil:g("Valid until").slice(0,10),procRef:g("Procedure"),active:true,sp:true,cycles:defCycles()}); nt++; } }
+    const sw = wb.Sheets["Shipment Log"]; const sh = sw && findHdr(sw,"Record ID");
+    if(!sh) throw new Error("no sheet");
+    const norm = h => h.replace(/\s+/g," ").trim();
+    const idx = XH.map(h=>sh.hdr.findIndex(x=>norm(x)===norm(h)));
+    for(const row of sh.rows){
+      const rid = cellStr(row[idx[0]]); if(!rid) continue;
+      if(S.records.some(x=>x.recordId===rid)){ skip++; continue; }
+      const d={attachments:[]};
+      XK.forEach((k,i)=>{ if(!k||idx[i]<0) return; let v=row[idx[i]]; d[k] = DTK.has(k) ? (v instanceof Date ? toInput(v) : cellStr(v)) : cellStr(v); });
+      await putDoc("records",uid("r_"),d); nr++;
+    }
+    toast(tf("imported",{t:nt,r:nr,s:skip}));
+  }catch(e){ toast(t("importFail")); }
+}
+
+/* ---------------- events ---------------- */
+let delArm=null;
+document.addEventListener("click", async ev=>{
+  const el = ev.target.closest("[data-act],[data-tab]"); if(!el) return;
+  if(el.dataset.tab){ S.tab=el.dataset.tab; render(); return; }
+  const a=el.dataset.act, id=el.dataset.id;
+  if(a!=="editRec" && el.closest("tr.click") && el.tagName==="BUTTON") ev.stopPropagation();
+  switch(a){
+    case "newRec": openRecord(null); break;
+    case "editRec": if(ev.target.closest("button")) return; openRecord(id); break;
+    case "recReport": openReport("rec",id); break;
+    case "tankReport": openReport("tank",id); break;
+    case "closeModal": closeModal(true); break;
+    case "newTank": openTank(null); break;
+    case "editTank": openTank(id); break;
+    case "histTank": S.filter.tank=el.dataset.v; S.tab="log"; render(); break;
+    case "goLogAttn": S.filter.mode="attn"; S.tab="log"; render(); break;
+    case "fmode": S.filter.mode=el.dataset.v; render(); break;
+    case "genId": document.getElementById("r_recordId").value = nextRecordId(); liveStatus(); break;
+    case "openFile": ev.preventDefault(); openFile(id); break;
+    case "printPdf": buildPdf(window.open("", "_blank")); break;
+    case "pickFile": document.getElementById("upFile").click(); break;
+    case "rmAtt": {
+      const i=+el.dataset.i;
+      if(delArm!==el){ delArm=el; el.textContent=t("confirmDel"); setTimeout(()=>{ if(delArm===el){ delArm=null; el.textContent=t("del"); } },4000); return; }
+      delArm=null; const at=draft.attachments.splice(i,1)[0];
+      try{ if(!draftNew){ readForm(); await persistRecord(true); } await assets.delete(at.id); }catch(e){}
+      renderAtt(); liveStatus(); toast(t("deleted")); break; }
+    case "delRec": {
+      if(delArm!==el){ delArm=el; const rr=S.records.find(x=>x.id===draft.id); el.textContent = rr && C(rr).retain==="Recent - retain" ? t("delRecent") : t("confirmDel"); setTimeout(()=>{ if(delArm===el){ delArm=null; el.textContent=t("del"); } },4000); return; }
+      delArm=null; const atts=(draft.attachments||[]).map(x=>x.id);
+      try{ await delDoc("records",draft.id); for(const x of atts){ try{ await assets?.delete(x);}catch(e){} } toast(t("deleted")); closeModal(); }catch(e){ toast(e.message||e); } break; }
+    case "delTank": {
+      if(delArm!==el){ delArm=el; el.textContent=t("confirmDel"); setTimeout(()=>{ if(delArm===el){ delArm=null; el.textContent=t("del"); } },4000); return; }
+      delArm=null; try{ await delDoc("tanks",tDraft.id); toast(t("deleted")); closeModal(); }catch(e){ toast(e.message||e); } break; }
+    case "dlPdf": buildPdf(null); break;
+    case "export": exportXlsx(); break;
+    case "import": document.getElementById("importFile").click(); break;
+  }
+});
+document.addEventListener("change", async ev=>{
+  const el=ev.target;
+  if(el.id==="ftank"){ S.filter.tank=el.value; render(); }
+  else if(el.id==="importFile" && el.files[0]){ await importXlsx(el.files[0]); el.value=""; }
+  else if(el.dataset.attKind!==undefined){ draft.attachments[+el.dataset.attKind].kind=el.value; if(!draftNew){ readForm(); await persistRecord(true);} liveStatus(); }
+  else if(el.id==="rpLang"){ rLang=el.value; renderReport(); }
+  else if(el.id==="rpScope"){ rep.scope=el.value; renderReport(); }
+  else if(el.id==="rpEv"){ rep.incEv=el.checked; renderReport(); }
+  else if(el.dataset && el.dataset.cyc){ const n=document.getElementById(el.dataset.cyc); if(n) n.hidden=!needN(el.value); }
+  if(el.id==="k_sp"||el.id==="k_cyc_fe"){ const w=document.getElementById("cycWarnBox"); if(w) w.hidden = !(document.getElementById("k_sp").value==="Yes" && document.getElementById("k_cyc_fe").value!=="shipment"); }
+  if(el.closest && el.closest("#recForm")) liveStatus();
+});
+document.addEventListener("input", ev=>{
+  const el=ev.target;
+  if(el.id==="fq"){ S.filter.q=el.value; S._fq=true; render(); }
+  else if(el.closest && el.closest("#recForm") && el.tagName!=="TEXTAREA") liveStatus();
+});
+document.addEventListener("submit", async ev=>{
+  ev.preventDefault();
+  if(ev.target.id==="recForm") saveRecord();
+  else if(ev.target.id==="tankForm") saveTank();
+  else if(ev.target.id==="setForm"){
+    const g=k=>document.getElementById("s_"+k).value;
+    const d={feTrigger:+g("feTrigger")||50, deadlineDays:parseInt(g("deadlineDays"))||15, recentN:parseInt(g("recentN"))||5, tz:g("tz"), company:g("company"), address:g("address"), preparer:g("preparer"), defCycles:readCycles("s")};
+    try{ await putDoc("config","settings",d); if(S.mode==="shared"){ S.settings={...S.settings,...d}; recompute(); render(); } toast(t("saved")); }catch(e){ toast(e.message||e); }
+  }
+});
+document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && document.getElementById("modalRoot").innerHTML) closeModal(true); });
+document.getElementById("langKo").onclick=()=>{S.lang="ko"; lsSet("sp_lang","ko"); render();};
+document.getElementById("langEn").onclick=()=>{S.lang="en"; lsSet("sp_lang","en"); render();};
+
+let toastT=null;
+function toast(msg){ const r=document.getElementById("toastRoot"); r.innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toastT); toastT=setTimeout(()=>{r.innerHTML=""},4200); }
+
+
+init();
+})();
+</script>
+</body>
+</html>
